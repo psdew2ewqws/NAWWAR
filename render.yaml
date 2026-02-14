@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: nawwar
+    runtime: python
+    buildCommand: pip install -r requirements/nawwar.txt && pip install gunicorn whitenoise && python manage.py collectstatic --noinput
+    startCommand: gunicorn project.wsgi:application --bind 0.0.0.0:$PORT --workers 3 --timeout 120
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: project.settings.prod
+      - key: PYTHON_VERSION
+        value: "3.13.0"

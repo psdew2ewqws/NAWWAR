@@ -1,0 +1,455 @@
+{% extends "dashboard/nawwar_base.html" %}
+{% load nawwar_tags %}
+
+{% block nav_ops %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Operations Center — Minimal Professional */
+
+    /* Hero */
+    .ops-hero { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--gap-xl); }
+    .ops-hero-title { font-size: 1.25rem; font-weight: 700; color: var(--text-heading); letter-spacing: -0.3px; }
+    .ops-hero-sub { font-family: var(--mono); font-size: 0.6875rem; color: var(--text-muted); margin-top: 4px; letter-spacing: 0.3px; }
+    .ops-live { display: flex; align-items: center; gap: 10px; }
+    .ops-live-tag { font-family: var(--mono); font-size: 0.5625rem; font-weight: 500; letter-spacing: 0.8px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+    .ops-live-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--operational); animation: pulse-dot 3s ease-in-out infinite; }
+    .ops-update-tag { font-family: var(--mono); font-size: 0.5625rem; color: var(--text-muted); letter-spacing: 0.3px; transition: color 0.3s; }
+
+    /* KPI Row - Clean grid, NO colored boxes, NO accent lines */
+    .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--gap-md); margin-bottom: var(--gap-xl); }
+    @media (max-width: 1024px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 540px) { .kpi-row { grid-template-columns: 1fr; } }
+
+    .kpi-item { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: var(--gap-lg) var(--gap-xl); transition: border-color 0.2s; }
+    .kpi-item:hover { border-color: var(--border-default); }
+
+    .kpi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--gap-md); }
+    .kpi-top svg { width: 15px; height: 15px; color: var(--text-muted); stroke-width: 1.5; }
+    .kpi-badge { font-family: var(--mono); font-size: 0.5rem; color: var(--text-muted); letter-spacing: 0.5px; text-transform: uppercase; }
+
+    .kpi-value { font-family: var(--mono); font-size: 1.75rem; font-weight: 700; color: var(--text-heading); line-height: 1; letter-spacing: -0.5px; }
+    .kpi-unit { font-size: 0.75rem; font-weight: 400; color: var(--text-muted); margin-right: 2px; }
+    .kpi-label { font-size: 0.6875rem; color: var(--text-muted); margin-top: 6px; }
+    .kpi-sub { font-family: var(--mono); font-size: 0.5rem; color: var(--text-muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.6; }
+
+    /* Plant Cards - Clean, no gradient borders */
+    .plants-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap-md); margin-bottom: var(--gap-xl); }
+    @media (max-width: 1200px) { .plants-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 768px) { .plants-grid { grid-template-columns: 1fr; } }
+
+    .plant-card { display: block; text-decoration: none !important; color: inherit !important; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: var(--gap-xl); transition: all 0.2s ease; cursor: pointer; position: relative; }
+    .plant-card:hover { border-color: var(--border-default); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
+    /* Thin status line on right side */
+    .plant-card::before { content: ''; position: absolute; top: 8px; right: 0; width: 2px; height: calc(100% - 16px); border-radius: 1px; }
+    .plant-card.card-online::before { background: var(--operational); opacity: 0.5; }
+    .plant-card.card-offline::before { background: var(--critical); opacity: 0.5; }
+    .plant-card.card-maintenance::before { background: var(--warning); opacity: 0.5; }
+    .plant-card.card-derated::before { background: var(--warning); opacity: 0.5; }
+
+    .plant-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: var(--gap-lg); }
+    .plant-name { font-size: 0.9375rem; font-weight: 600; color: var(--text-heading); }
+    .plant-name-en { font-size: 0.625rem; color: var(--text-muted); font-family: var(--mono); margin-top: 2px; letter-spacing: 0.2px; }
+
+    .plant-status-tag { font-family: var(--mono); font-size: 0.5rem; padding: 2px 8px; border-radius: 3px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(99,110,123,0.08); color: var(--text-muted); border: 1px solid rgba(99,110,123,0.12); }
+    .tag-online { background: rgba(46,160,67,0.06); color: var(--operational); border-color: rgba(46,160,67,0.12); }
+    .tag-offline { background: rgba(218,54,51,0.06); color: var(--critical); border-color: rgba(218,54,51,0.12); }
+    .tag-maintenance { background: rgba(210,153,34,0.06); color: var(--warning); border-color: rgba(210,153,34,0.12); }
+    .tag-derated { background: rgba(210,153,34,0.06); color: var(--warning); border-color: rgba(210,153,34,0.12); }
+
+    .plant-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap-sm); padding: var(--gap-md) 0; }
+    .plant-metric-value { font-family: var(--mono); font-size: 1.125rem; font-weight: 700; color: var(--text-heading); line-height: 1; }
+    .plant-metric-label { font-size: 0.5rem; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; font-family: var(--mono); }
+
+    .load-bar { height: 2px; background: var(--bg-overlay); border-radius: 1px; overflow: hidden; margin-top: var(--gap-md); }
+    .load-bar-fill { height: 100%; border-radius: 1px; transition: width 1s ease; }
+    .load-green { background: var(--text-muted); }
+    .load-amber { background: var(--text-secondary); }
+    .load-red { background: var(--text-primary); }
+
+    .plant-footer { display: flex; align-items: center; justify-content: space-between; margin-top: var(--gap-md); padding-top: var(--gap-md); border-top: 1px solid var(--border-subtle); }
+    .plant-footer-load { font-family: var(--mono); font-size: 0.625rem; color: var(--text-muted); letter-spacing: 0.3px; }
+    .plant-footer-link { display: flex; align-items: center; gap: 4px; color: var(--text-muted); font-size: 0.6875rem; transition: color 0.15s; }
+    .plant-card:hover .plant-footer-link { color: var(--text-secondary); }
+    .plant-footer-link svg { width: 10px; height: 10px; transition: transform 0.15s; }
+    .plant-card:hover .plant-footer-link svg { transform: translateX(-2px); }
+
+    /* Panels - Clean, no gradients */
+    .ops-grid-2-1 { display: grid; grid-template-columns: 1.7fr 1fr; gap: var(--gap-md); }
+    @media (max-width: 1200px) { .ops-grid-2-1 { grid-template-columns: 1fr; } }
+
+    .panel { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); overflow: hidden; }
+    .panel-header { padding: var(--gap-md) var(--gap-lg); border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; }
+    .panel-title { font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; letter-spacing: -0.1px; }
+    .panel-title svg { width: 13px; height: 13px; stroke-width: 1.5; color: var(--text-muted); opacity: 0.6; }
+    .panel-badge { font-family: var(--mono); font-size: 0.5rem; padding: 2px 8px; border-radius: 3px; font-weight: 500; letter-spacing: 0.3px; background: rgba(99,110,123,0.06); color: var(--text-muted); border: 1px solid rgba(99,110,123,0.1); }
+    .panel-body { padding: var(--gap-lg); }
+
+    .chart-wrapper { position: relative; width: 100%; height: 260px; }
+
+    /* Alerts - Clean */
+    .alerts-body { max-height: 360px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border-default) transparent; }
+    .alert-item { padding: var(--gap-md) var(--gap-lg); border-bottom: 1px solid var(--border-subtle); display: flex; align-items: flex-start; gap: var(--gap-sm); transition: background 0.15s; }
+    .alert-item:hover { background: var(--bg-elevated); }
+    .alert-item:last-child { border-bottom: none; }
+    .alert-indicator { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+    .ind-critical { background: var(--critical); }
+    .ind-high { background: var(--warning); }
+    .ind-medium { background: var(--info); opacity: 0.7; }
+    .ind-low { background: var(--text-muted); opacity: 0.5; }
+    .alert-content { flex: 1; min-width: 0; }
+    .alert-title { font-size: 0.75rem; font-weight: 600; color: var(--text-heading); }
+    .alert-desc { font-size: 0.6875rem; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .alert-meta { font-size: 0.5rem; color: var(--text-muted); margin-top: 3px; font-family: var(--mono); display: flex; align-items: center; gap: 6px; letter-spacing: 0.2px; opacity: 0.7; }
+    .alert-severity-tag { font-family: var(--mono); font-size: 0.5rem; padding: 1px 6px; border-radius: 3px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.4px; flex-shrink: 0; align-self: center; }
+    .badge-severity-critical { background: rgba(218,54,51,0.06); color: var(--critical); }
+    .badge-severity-high { background: rgba(210,153,34,0.06); color: var(--warning); }
+    .badge-severity-medium { background: rgba(56,139,253,0.06); color: var(--text-secondary); }
+    .badge-severity-low { background: rgba(99,110,123,0.06); color: var(--text-muted); }
+
+    /* Emissions Table */
+    .emissions-section { margin-top: var(--gap-xl); }
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th { font-size: 0.5rem; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: var(--gap-sm) var(--gap-lg); border-bottom: 1px solid var(--border-subtle); text-align: right; font-family: var(--mono); }
+    .data-table td { padding: 10px var(--gap-lg); border-bottom: 1px solid var(--border-subtle); font-size: 0.75rem; }
+    .data-table tr:hover td { background: var(--bg-elevated); }
+    .emission-val { display: flex; align-items: center; gap: 6px; font-family: var(--mono); color: var(--text-primary); }
+    .emission-limit { color: var(--text-muted); font-size: 0.5625rem; }
+    .compliance-tag { font-family: var(--mono); font-size: 0.5rem; padding: 2px 8px; border-radius: 3px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.4px; }
+    .tag-compliant { background: rgba(46,160,67,0.06); color: var(--operational); }
+    .tag-exceeds { background: rgba(218,54,51,0.06); color: var(--critical); }
+
+    /* Subtle fade-in */
+    .fade-up { animation: fadeUp 0.3s ease both; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .d1 { animation-delay: 0.03s; } .d2 { animation-delay: 0.06s; } .d3 { animation-delay: 0.09s; } .d4 { animation-delay: 0.12s; }
+
+    .empty-state { text-align: center; padding: 40px var(--gap-xl); color: var(--text-muted); font-size: 0.75rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<div class="ops-hero fade-up d1">
+    <div>
+        <div class="ops-hero-title">مركز العمليات</div>
+        <div class="ops-hero-sub">OPERATIONS CENTER · {{ plant_count }} Plants · {{ turbine_count }} Turbines</div>
+    </div>
+    <div class="ops-live">
+        <span class="ops-update-tag" id="last-update">LIVE</span>
+        <span class="ops-live-tag">
+            <span class="ops-live-dot"></span>
+            OPERATIONAL
+        </span>
+    </div>
+</div>
+
+<!-- KPI Row - bare icons, no colored boxes -->
+<div class="kpi-row fade-up d2">
+    <div class="kpi-item">
+        <div class="kpi-top">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 12l4-5" stroke-width="2"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
+            <span class="kpi-badge">{{ total_load_pct }}%</span>
+        </div>
+        <div class="kpi-value" id="kpi-load">{{ total_load|floatformat:0 }}<span class="kpi-unit">MW</span></div>
+        <div class="kpi-label">إجمالي الحمل الحالي</div>
+        <div class="kpi-sub">Current Generation</div>
+    </div>
+    <div class="kpi-item">
+        <div class="kpi-top">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="4" y="14" width="4" height="7" rx="1"/><rect x="10" y="9" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="17" rx="1"/></svg>
+            <span class="kpi-badge">MAX</span>
+        </div>
+        <div class="kpi-value">{{ total_capacity|floatformat:0 }}<span class="kpi-unit">MW</span></div>
+        <div class="kpi-label">السعة الإجمالية</div>
+        <div class="kpi-sub">Total Capacity</div>
+    </div>
+    <div class="kpi-item">
+        <div class="kpi-top">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="11" width="7" height="10" rx="1"/><rect x="14" y="7" width="7" height="14" rx="1"/><path d="M5.5 7v4M18 3v4" stroke-width="2"/></svg>
+            <span class="kpi-badge">ALL</span>
+        </div>
+        <div class="kpi-value">{{ plant_count }}</div>
+        <div class="kpi-label">محطات نشطة</div>
+        <div class="kpi-sub">Active Plants</div>
+    </div>
+    <div class="kpi-item">
+        <div class="kpi-top">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+            <span class="kpi-badge">{{ all_predictions|length }} ACTIVE</span>
+        </div>
+        <div class="kpi-value" id="kpi-alerts">{{ all_predictions|length }}</div>
+        <div class="kpi-label">تنبيهات نشطة</div>
+        <div class="kpi-sub">Maintenance Alerts</div>
+    </div>
+</div>
+
+<!-- Plant Cards -->
+<div class="plants-grid fade-up d3">
+    {% for pd in plant_data %}
+    <a href="{% url 'dashboard:operations-plant-detail' pd.plant.code|lower %}" class="plant-card card-{{ pd.plant.status }}">
+        <div class="plant-card-header">
+            <div>
+                <div class="plant-name">{{ pd.plant.name_ar|default:pd.plant.name }}</div>
+                <div class="plant-name-en">{{ pd.plant.code }} · {{ pd.plant.get_plant_type_display }}</div>
+            </div>
+            <span class="plant-status-tag tag-{{ pd.plant.status }}">{{ pd.plant.get_status_display }}</span>
+        </div>
+        <div class="plant-metrics">
+            <div>
+                <div class="plant-metric-value">{{ pd.online_turbines }}/{{ pd.total_turbines }}</div>
+                <div class="plant-metric-label">Turbines</div>
+            </div>
+            <div>
+                <div class="plant-metric-value">{{ pd.plant.capacity_mw|floatformat:0 }}</div>
+                <div class="plant-metric-label">MW Capacity</div>
+            </div>
+            <div>
+                <div class="plant-metric-value">{{ pd.plant.current_load_mw|floatformat:0 }}</div>
+                <div class="plant-metric-label">MW Load</div>
+            </div>
+        </div>
+        <div class="load-bar">
+            <div class="load-bar-fill {% if pd.load_pct > 90 %}load-red{% elif pd.load_pct > 70 %}load-amber{% else %}load-green{% endif %}" style="width: {{ pd.load_pct }}%;"></div>
+        </div>
+        <div class="plant-footer">
+            <span class="plant-footer-load">{{ pd.load_pct }}% LOAD</span>
+            <span class="plant-footer-link">
+                عرض التفاصيل
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            </span>
+        </div>
+    </a>
+    {% empty %}
+    <div class="panel" style="grid-column: 1 / -1;">
+        <div class="empty-state">لا توجد محطات مُسجّلة · No plants registered</div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Charts + Alerts -->
+<div class="ops-grid-2-1 fade-up d4">
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l5-8 4 4 9-13" stroke-width="1.5"/></svg>
+                Demand Forecast — توقعات الطلب
+            </div>
+            <span class="panel-badge">AI · 24H</span>
+        </div>
+        <div class="panel-body">
+            <div class="chart-wrapper"><canvas id="demandChart"></canvas></div>
+        </div>
+    </div>
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" stroke-width="1.5"/></svg>
+                تنبيهات الصيانة
+            </div>
+            <span class="panel-badge">{{ all_predictions|length }}</span>
+        </div>
+        <div class="alerts-body">
+            {% for pred in all_predictions %}
+            <div class="alert-item">
+                <div class="alert-indicator ind-{{ pred.severity }}"></div>
+                <div class="alert-content">
+                    <div class="alert-title">{{ pred.get_prediction_type_display }}</div>
+                    <div class="alert-desc">{{ pred.description|default:pred.description_ar|truncatechars:55 }}</div>
+                    <div class="alert-meta">
+                        {{ pred.turbine.plant.code }}-{{ pred.turbine.turbine_id }} · {{ pred.predicted_failure_date|date:"M d" }} · {{ pred.confidence|floatformat:0 }}%
+                    </div>
+                </div>
+                <span class="alert-severity-tag badge-severity-{{ pred.severity }}">{{ pred.severity|upper }}</span>
+            </div>
+            {% empty %}
+            <div class="empty-state">
+                <div style="color: var(--text-secondary);">لا توجد تنبيهات نشطة</div>
+                <div style="font-size: 0.625rem; color: var(--text-muted); margin-top: 4px; font-family: var(--mono);">ALL SYSTEMS NOMINAL</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Emissions -->
+<div class="emissions-section fade-up d4">
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                Emissions Compliance — الامتثال البيئي
+            </div>
+            <span class="panel-badge">MONITORING</span>
+        </div>
+        <div style="padding: 0;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Plant</th>
+                        <th>NOx (ppm)</th>
+                        <th>CO₂ (tonnes)</th>
+                        <th>SOx (ppm)</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pd in plant_data %}
+                    {% if pd.latest_emission %}
+                    <tr>
+                        <td style="font-weight: 600; color: var(--text-heading);">
+                            {{ pd.plant.name_ar|default:pd.plant.name }}
+                            <span style="font-family: var(--mono); font-size: 0.5rem; color: var(--text-muted); margin-right: 4px;">{{ pd.plant.code }}</span>
+                        </td>
+                        <td>
+                            <div class="emission-val">
+                                {{ pd.latest_emission.nox_ppm|floatformat:1 }}
+                                <span class="emission-limit">/ {{ pd.latest_emission.nox_limit|floatformat:0 }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="emission-val">
+                                {{ pd.latest_emission.co2_tonnes|floatformat:1 }}
+                                <span class="emission-limit">/ {{ pd.latest_emission.co2_limit|floatformat:0 }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="emission-val">
+                                {{ pd.latest_emission.sox_ppm|floatformat:1 }}
+                                <span class="emission-limit">/ {{ pd.latest_emission.sox_limit|floatformat:0 }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if pd.latest_emission.is_compliant %}
+                            <span class="compliance-tag tag-compliant">Compliant</span>
+                            {% else %}
+                            <span class="compliance-tag tag-exceeds">Exceeds</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    'use strict';
+    var forecastLabels = {{ forecast_labels_json|safe }};
+    var forecastValues = {{ forecast_values_json|safe }};
+    var forecastLower = {{ forecast_lower_json|safe }};
+    var forecastUpper = {{ forecast_upper_json|safe }};
+
+    if (forecastLabels.length > 0) {
+        var ctx = document.getElementById('demandChart').getContext('2d');
+        var gradientFill = ctx.createLinearGradient(0, 0, 0, 260);
+        gradientFill.addColorStop(0, 'rgba(201, 209, 217, 0.08)');
+        gradientFill.addColorStop(1, 'rgba(201, 209, 217, 0.01)');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: forecastLabels,
+                datasets: [
+                    {
+                        label: 'Upper Bound',
+                        data: forecastUpper,
+                        borderColor: 'rgba(201, 209, 217, 0.12)',
+                        borderWidth: 1,
+                        borderDash: [4, 4],
+                        backgroundColor: gradientFill,
+                        fill: '+1',
+                        pointRadius: 0,
+                        tension: 0.4,
+                        order: 2
+                    },
+                    {
+                        label: 'Predicted MW',
+                        data: forecastValues,
+                        borderColor: 'rgba(201, 209, 217, 0.6)',
+                        backgroundColor: 'transparent',
+                        fill: false,
+                        tension: 0.4,
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        pointHoverBackgroundColor: '#c9d1d9',
+                        pointHoverBorderColor: '#0d1117',
+                        pointHoverBorderWidth: 2,
+                        order: 1
+                    },
+                    {
+                        label: 'Lower Bound',
+                        data: forecastLower,
+                        borderColor: 'rgba(201, 209, 217, 0.12)',
+                        borderDash: [4, 4],
+                        borderWidth: 1,
+                        backgroundColor: 'transparent',
+                        fill: false,
+                        pointRadius: 0,
+                        tension: 0.4,
+                        order: 3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            filter: function(item) { return item.text === 'Predicted MW'; },
+                            boxWidth: 12, boxHeight: 1,
+                            color: '#484f58',
+                            font: { size: 10, family: "'IBM Plex Mono', monospace" },
+                            padding: 16
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#151b25',
+                        borderColor: 'rgba(48, 62, 80, 0.6)',
+                        borderWidth: 1,
+                        titleFont: { family: "'IBM Plex Mono', monospace", size: 10, weight: '500' },
+                        bodyFont: { family: "'IBM Plex Mono', monospace", size: 10 },
+                        padding: 10,
+                        cornerRadius: 4,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(ctx) {
+                                if (ctx.dataset.label === 'Predicted MW') return ctx.parsed.y.toFixed(1) + ' MW';
+                                return null;
+                            },
+                            afterBody: function(items) {
+                                var i = items[0].dataIndex;
+                                return [forecastLower[i].toFixed(1) + ' – ' + forecastUpper[i].toFixed(1) + ' MW'];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 9 }, color: '#484f58' } },
+                    y: { grid: { color: 'rgba(48, 62, 80, 0.15)', drawBorder: false }, ticks: { callback: function(v) { return v + ' MW'; }, font: { size: 9 }, color: '#484f58', padding: 8 } }
+                }
+            }
+        });
+    }
+
+    function refreshData() {
+        fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r) { if (r.ok) { var e = document.getElementById('last-update'); if (e) { var n = new Date(); e.textContent = String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0'); } } })
+            .catch(function() {});
+    }
+    setInterval(refreshData, 30000);
+})();
+</script>
+{% endblock %}

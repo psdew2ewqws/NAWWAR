@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block title %}Users - Django Best Practices{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <!-- Header -->
+    <div class="mb-10 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Users</h1>
+            <p class="mt-2 text-gray-600">All registered users on the platform</p>
+        </div>
+        <div class="mt-4 sm:mt-0">
+            <span class="inline-flex items-center px-4 py-2 bg-primary-100 text-primary-700 rounded-xl font-medium">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                {{ users.count }} Total Users
+            </span>
+        </div>
+    </div>
+
+    <!-- Users Grid -->
+    {% if users %}
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for u in users %}
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow duration-300">
+            <div class="p-6">
+                <div class="flex items-center space-x-4">
+                    <!-- Avatar -->
+                    {% if u.avatar %}
+                    <img src="{{ u.avatar.url }}" alt="{{ u.full_name }}" class="w-16 h-16 rounded-xl object-cover">
+                    {% else %}
+                    <div class="w-16 h-16 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <span class="text-xl font-bold text-white">{{ u.first_name|slice:":1"|default:u.email|slice:":1"|upper }}</span>
+                    </div>
+                    {% endif %}
+
+                    <!-- Info -->
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center space-x-2">
+                            <h3 class="text-lg font-semibold text-gray-900 truncate">
+                                {{ u.full_name|default:u.username }}
+                            </h3>
+                            {% if u.is_verified %}
+                            <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                            {% endif %}
+                        </div>
+                        <p class="text-sm text-gray-500 truncate">{{ u.email }}</p>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="mt-6 flex items-center justify-between text-sm">
+                    <div class="flex items-center text-gray-500">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        Joined {{ u.created_at|date:"M j, Y" }}
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        {% if u.is_staff %}
+                        <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-lg">Staff</span>
+                        {% endif %}
+                        {% if u.is_active %}
+                        <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-lg">Active</span>
+                        {% else %}
+                        <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-lg">Inactive</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current user indicator -->
+            {% if u.id == user.id %}
+            <div class="px-6 py-3 bg-primary-50 border-t border-primary-100">
+                <p class="text-sm text-primary-700 font-medium flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+                    </svg>
+                    This is you
+                </p>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-16">
+        <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-900 mb-2">No users yet</h3>
+        <p class="text-gray-600">Be the first to create an account!</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

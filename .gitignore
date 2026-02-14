@@ -1,0 +1,99 @@
+# Django
+*.log
+*.pot
+*.pyc
+__pycache__/
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+
+# Static files
+staticfiles/
+
+# Environment
+.env
+.venv
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Claude / AI assistant
+.auto-claude/
+.claude/
+.claude_settings.json
+CLAUDE.md
+.mcp/
+
+# Worktrees / old branches
+.worktrees/
+
+# Keras
+.keras/
+
+# Nawwar AI
+chromadb_data/
+*.wav
+*.mp3
+*.ogg
+*.opus
+*.m4a
+
+# Screenshots & temp images
+*.jpeg
+*.jpg
+*.png
+!static/**
+
+# Drive downloads
+drive-download-*/
+
+# Temp HTML
+nawwar_art.html
+pitch_deck.html
+
+# Separate projects / services
+content-generator-service/
+content-generator-web/
+
+# Video (no longer used)
+static/video/
+
+# Comparison scripts
+comparison_example.py
+
+# Credentials & sensitive docs
+DATABASE_CREDENTIALS.md
+
+# Internal task/recon notes
+tasks/
+api_recon/
+project_tracker.json
+
+# Old migration guides (not part of app)
+DECOUPLE_MIGRATION.md
+DECOUPLE_QUICK_REFERENCE.md
+ENVIRONMENT_VARIABLES_GUIDE.md
+HOW_DECOUPLE_WORKS_VISUAL.md
+HOW_TO_USE_DECOUPLE.md
+MODELS_DIRECTORY_STRUCTURE.md

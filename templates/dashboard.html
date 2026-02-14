@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Django Best Practices{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <!-- Header -->
+    <div class="mb-10">
+        <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p class="mt-2 text-gray-600">Welcome back, {{ user.full_name|default:user.email }}!</p>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-8">
+        <!-- Profile Card -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-gray-900">Profile Information</h2>
+                    <button
+                        onclick="toggleEditMode()"
+                        id="edit-btn"
+                        class="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center space-x-1"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                        </svg>
+                        <span>Edit</span>
+                    </button>
+                </div>
+
+                <!-- View Mode -->
+                <div id="view-mode" class="p-6">
+                    <div class="flex items-start space-x-6">
+                        <!-- Avatar -->
+                        <div class="flex-shrink-0">
+                            {% if user.avatar %}
+                            <img src="{{ user.avatar.url }}" alt="{{ user.full_name }}" class="w-24 h-24 rounded-2xl object-cover">
+                            {% else %}
+                            <div class="w-24 h-24 bg-gradient-to-br from-primary-400 to-primary-600 rounded-2xl flex items-center justify-center">
+                                <span class="text-3xl font-bold text-white">{{ user.first_name|slice:":1"|default:user.email|slice:":1"|upper }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Info -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center space-x-3">
+                                <h3 class="text-xl font-semibold text-gray-900">{{ user.full_name|default:"No name set" }}</h3>
+                                {% if user.is_verified %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                    </svg>
+                                    Verified
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    Unverified
+                                </span>
+                                {% endif %}
+                            </div>
+                            <p class="mt-1 text-gray-500">@{{ user.username }}</p>
+
+                            <div class="mt-6 grid sm:grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sm text-gray-500">Email</p>
+                                    <p class="mt-1 text-gray-900">{{ user.email }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Phone</p>
+                                    <p class="mt-1 text-gray-900">{{ user.phone|default:"Not set" }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Member Since</p>
+                                    <p class="mt-1 text-gray-900">{{ user.created_at|date:"F j, Y" }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Last Updated</p>
+                                    <p class="mt-1 text-gray-900">{{ user.updated_at|date:"F j, Y" }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Mode -->
+                <div id="edit-mode" class="p-6 hidden">
+                    <form method="post" enctype="multipart/form-data" class="space-y-6">
+                        {% csrf_token %}
+
+                        <div class="grid sm:grid-cols-2 gap-6">
+                            <div>
+                                <label for="first_name" class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                                <input
+                                    type="text"
+                                    id="first_name"
+                                    name="first_name"
+                                    value="{{ user.first_name }}"
+                                    class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                                >
+                            </div>
+                            <div>
+                                <label for="last_name" class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                                <input
+                                    type="text"
+                                    id="last_name"
+                                    name="last_name"
+                                    value="{{ user.last_name }}"
+                                    class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                                >
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                            <input
+                                type="tel"
+                                id="phone"
+                                name="phone"
+                                value="{{ user.phone }}"
+                                placeholder="+1 (555) 000-0000"
+                                class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                            >
+                        </div>
+
+                        <div>
+                            <label for="avatar" class="block text-sm font-medium text-gray-700 mb-2">Profile Picture</label>
+                            <input
+                                type="file"
+                                id="avatar"
+                                name="avatar"
+                                accept="image/*"
+                                class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                            >
+                        </div>
+
+                        <div class="flex items-center space-x-4 pt-4">
+                            <button
+                                type="submit"
+                                class="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl shadow-sm transition-colors"
+                            >
+                                Save Changes
+                            </button>
+                            <button
+                                type="button"
+                                onclick="toggleEditMode()"
+                                class="px-6 py-3 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Quick Stats -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Account Status</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Status</span>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-medium {% if user.is_active %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
+                            {% if user.is_active %}Active{% else %}Inactive{% endif %}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Verification</span>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-medium {% if user.is_verified %}bg-green-100 text-green-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                            {% if user.is_verified %}Verified{% else %}Pending{% endif %}
+                        </span>
+                    </div>
+                    {% if user.is_staff %}
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Role</span>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-medium bg-purple-100 text-purple-700">
+                            Staff
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                <div class="space-y-3">
+                    <a href="{% url 'user-list' %}" class="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group">
+                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900">View All Users</p>
+                            <p class="text-sm text-gray-500">Browse registered users</p>
+                        </div>
+                    </a>
+                    {% if user.is_staff %}
+                    <a href="/admin/" class="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group">
+                        <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                            <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900">Admin Panel</p>
+                            <p class="text-sm text-gray-500">Manage the application</p>
+                        </div>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    function toggleEditMode() {
+        const viewMode = document.getElementById('view-mode');
+        const editMode = document.getElementById('edit-mode');
+        const editBtn = document.getElementById('edit-btn');
+
+        viewMode.classList.toggle('hidden');
+        editMode.classList.toggle('hidden');
+
+        if (editMode.classList.contains('hidden')) {
+            editBtn.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                </svg>
+                <span>Edit</span>
+            `;
+        } else {
+            editBtn.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+                <span>Cancel</span>
+            `;
+        }
+    }
+</script>
+{% endblock %}
+{% endblock %}

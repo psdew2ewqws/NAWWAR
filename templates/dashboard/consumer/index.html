@@ -1,0 +1,864 @@
+{% extends "dashboard/nawwar_base.html" %}
+{% load nawwar_tags %}
+
+{% block nav_consumer %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ═══════════════════════════════════════════
+       Consumer AI Interface — Premium Design
+       ═══════════════════════════════════════════ */
+
+    .app-layout {
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        gap: var(--gap-lg);
+        height: calc(100vh - 160px);
+        min-height: 540px;
+    }
+    @media (max-width: 1024px) {
+        .app-layout { grid-template-columns: 1fr; height: auto; min-height: 70vh; }
+        .app-sidebar { display: none; }
+    }
+
+    /* ─── Chat Container ─── */
+    .chat-container {
+        display: flex;
+        flex-direction: column;
+        background: var(--bg-surface);
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--border-subtle);
+        overflow: hidden;
+        position: relative;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 8px 32px rgba(0,0,0,0.16);
+    }
+    .chat-container::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent 5%, rgba(201, 209, 217, 0.15) 50%, transparent 95%);
+        z-index: 1;
+    }
+    .chat-header {
+        padding: var(--gap-md) var(--gap-xl);
+        border-bottom: 1px solid var(--border-subtle);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: transparent;
+        position: relative; z-index: 1;
+    }
+    .chat-header-title {
+        font-size: 0.9375rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: var(--gap-sm);
+    }
+    .chat-header-name {
+        color: var(--text-heading);
+        font-weight: 700;
+    }
+    .chat-header-ver {
+        font-weight: 400; font-size: 0.625rem; color: var(--text-muted);
+        font-family: var(--mono); -webkit-text-fill-color: var(--text-muted);
+    }
+    .chat-header-dot {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: var(--operational);
+        box-shadow: 0 0 8px var(--operational);
+        animation: pulse-dot 3s ease-in-out infinite;
+    }
+
+    /* ─── Messages ─── */
+    .chat-messages {
+        flex: 1; overflow-y: auto;
+        padding: var(--gap-2xl);
+        display: flex; flex-direction: column; gap: var(--gap-xl);
+    }
+    .msg {
+        display: flex; gap: var(--gap-md); max-width: 80%;
+        animation: msgSlide 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes msgSlide {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .msg-system { align-self: flex-start; }
+    .msg-user { align-self: flex-end; flex-direction: row-reverse; }
+    .msg-avatar {
+        width: 30px; height: 30px; border-radius: var(--radius-md);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.5625rem; font-weight: 700; flex-shrink: 0;
+        font-family: var(--mono); letter-spacing: 0.3px;
+    }
+    .msg-avatar-system {
+        background: var(--bg-overlay);
+        color: var(--text-secondary); border: 1px solid var(--border-subtle);
+    }
+    .msg-avatar-user {
+        background: var(--bg-elevated); color: var(--text-secondary);
+        border: 1px solid var(--border-subtle);
+    }
+    .msg-bubble {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        padding: var(--gap-lg) var(--gap-xl);
+        font-size: 0.8125rem; line-height: 1.75; color: var(--text-primary);
+    }
+    .msg-system .msg-bubble {
+        background: var(--bg-elevated);
+        border-color: var(--border-subtle);
+    }
+    .msg-user .msg-bubble {
+        background: var(--info-bg); border-color: var(--info-border);
+    }
+    .msg-bubble-title {
+        font-weight: 700; color: var(--text-heading);
+        margin-bottom: 4px; font-size: 0.875rem;
+    }
+
+    /* ─── Capability Chips ─── */
+    .capabilities {
+        display: grid; grid-template-columns: 1fr 1fr;
+        gap: 8px; margin-top: var(--gap-lg);
+    }
+    .cap-chip {
+        background: var(--bg-base); border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md); padding: 10px 14px;
+        font-size: 0.75rem; color: var(--text-secondary);
+        cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex; align-items: center; gap: 8px; font-weight: 500;
+    }
+    .cap-chip:hover {
+        border-color: var(--border-default);
+        background: var(--bg-elevated);
+        color: var(--text-primary);
+    }
+    .cap-icon {
+        width: 16px; height: 16px;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+        color: var(--text-muted);
+    }
+
+    /* ─── Input Bar ─── */
+    .chat-input-wrap {
+        padding: var(--gap-lg) var(--gap-xl);
+        border-top: 1px solid var(--border-subtle);
+        background: linear-gradient(180deg, transparent, rgba(7, 9, 15, 0.3));
+    }
+    .chat-input-bar {
+        display: flex; align-items: center; gap: var(--gap-sm);
+        background: var(--bg-input);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg); padding: 4px;
+        transition: all 0.2s;
+    }
+    .chat-input-bar:focus-within {
+        border-color: var(--border-default);
+        box-shadow: 0 0 0 2px rgba(201, 209, 217, 0.04);
+    }
+    .chat-input {
+        flex: 1; background: transparent; border: none;
+        padding: 8px 12px; color: var(--text-primary);
+        font-family: var(--sans); font-size: 0.8125rem; outline: none;
+    }
+    .chat-input::placeholder { color: var(--text-muted); }
+    .input-btn {
+        width: 34px; height: 34px; border-radius: var(--radius-md);
+        border: none; background: transparent; color: var(--text-muted);
+        cursor: pointer; display: flex; align-items: center; justify-content: center;
+        transition: all 0.15s; flex-shrink: 0;
+    }
+    .input-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+    .input-btn svg { width: 16px; height: 16px; }
+    .input-btn-send {
+        background: rgba(201, 209, 217, 0.06); color: var(--text-secondary);
+    }
+    .input-btn-send:hover {
+        background: rgba(201, 209, 217, 0.1);
+        color: var(--text-heading);
+    }
+    .input-btn-voice.recording {
+        background: rgba(218, 54, 51, 0.15); color: var(--critical);
+        animation: pulse-rec 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse-rec { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+
+    /* ─── Upload Bar ─── */
+    .upload-bar {
+        display: none; padding: 6px var(--gap-lg);
+        border-top: 1px solid var(--border-subtle);
+        font-size: 0.6875rem; color: var(--text-secondary);
+        font-family: var(--mono); align-items: center; gap: var(--gap-sm);
+        background: var(--bg-elevated);
+    }
+    .upload-bar.show { display: flex; }
+    .upload-bar-x {
+        background: none; border: none; color: var(--text-muted);
+        cursor: pointer; margin-right: auto; padding: 2px 4px; font-size: 0.75rem;
+    }
+    .upload-bar-x:hover { color: var(--critical); }
+
+    /* ─── Sidebar ─── */
+    .app-sidebar { display: flex; flex-direction: column; gap: var(--gap-md); }
+    .s-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-xl); overflow: hidden;
+    }
+    .s-card-head {
+        padding: 10px var(--gap-lg); border-bottom: 1px solid var(--border-subtle);
+        font-size: 0.5625rem; font-weight: 600; color: var(--text-muted);
+        text-transform: uppercase; letter-spacing: 0.8px; font-family: var(--mono);
+        display: flex; align-items: center; gap: 6px;
+    }
+    .s-dot { width: 4px; height: 4px; border-radius: 50%; flex-shrink: 0; }
+    .s-card-body { padding: var(--gap-md) var(--gap-lg); }
+
+    /* Tariff */
+    .t-strip { display: flex; height: 4px; border-radius: 2px; overflow: hidden; gap: 1px; }
+    .t-seg { transition: all 0.3s ease; }
+    .t-ticks { display: flex; justify-content: space-between; margin-top: 6px; }
+    .t-tick {
+        font-family: var(--mono); font-size: 0.5rem; color: var(--text-muted);
+        padding: 1px 3px; border-radius: 2px;
+    }
+    .t-tick.on { background: rgba(212, 168, 67, 0.12); color: #d4a843; font-weight: 600; }
+
+    /* Quick actions */
+    .qa {
+        width: 100%; text-align: right; background: var(--bg-base);
+        border: 1px solid transparent; border-radius: var(--radius-md);
+        padding: 9px 12px; color: var(--text-secondary);
+        font-family: var(--sans); font-size: 0.75rem; cursor: pointer;
+        transition: all 0.15s; display: flex; align-items: center; gap: 8px;
+    }
+    .qa:hover { border-color: var(--border-subtle); background: var(--bg-elevated); color: var(--text-primary); }
+    .qa-tag {
+        font-family: var(--mono); font-size: 0.5rem; padding: 1px 5px;
+        border-radius: 3px; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.3px; margin-right: auto;
+    }
+
+    /* Stats */
+    .s-stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap-md); text-align: center; }
+    .s-val { font-family: var(--mono); font-size: 1.125rem; font-weight: 700; color: var(--text-heading); }
+    .s-lbl { font-size: 0.5rem; color: var(--text-muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.5px; font-family: var(--mono); }
+
+    .footer { display: none; }
+    #bill-file-input { display: none; }
+
+    /* ─── Smart Meter Live Data ─── */
+    .sm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .sm-cell {
+        background: var(--bg-base); border-radius: var(--radius-md);
+        padding: 8px 10px; text-align: center;
+    }
+    .sm-val {
+        font-family: var(--mono); font-size: 1rem; font-weight: 700;
+        color: var(--text-heading); line-height: 1.2;
+    }
+    .sm-lbl {
+        font-size: 0.5rem; color: var(--text-muted); margin-top: 2px;
+        text-transform: uppercase; letter-spacing: 0.4px; font-family: var(--mono);
+    }
+    .sm-bar-wrap {
+        margin-top: 8px; display: flex; flex-direction: column; gap: 3px;
+    }
+    .sm-bar-row {
+        display: flex; align-items: center; gap: 6px;
+        font-size: 0.5625rem; font-family: var(--mono); color: var(--text-muted);
+    }
+    .sm-bar-row .sm-bar-label { width: 50px; text-align: left; flex-shrink: 0; }
+    .sm-bar-track {
+        flex: 1; height: 6px; background: var(--bg-overlay);
+        border-radius: 3px; overflow: hidden;
+    }
+    .sm-bar-fill {
+        height: 100%; border-radius: 3px; transition: width 0.6s ease;
+    }
+    .sm-bar-row .sm-bar-val {
+        width: 45px; text-align: left; font-weight: 600; color: var(--text-secondary);
+    }
+    .sm-reading {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 4px 0; font-family: var(--mono); font-size: 0.625rem;
+    }
+    .sm-reading-label { color: var(--text-muted); }
+    .sm-reading-val { color: var(--text-heading); font-weight: 600; }
+    .sm-chart-mini {
+        margin-top: 6px; display: flex; align-items: flex-end;
+        gap: 2px; height: 40px;
+    }
+    .sm-chart-bar {
+        flex: 1; background: var(--info); border-radius: 2px 2px 0 0;
+        min-height: 2px; transition: height 0.4s ease;
+        opacity: 0.6;
+    }
+    .sm-chart-bar:last-child { opacity: 1; }
+    .sm-chart-bar:hover { opacity: 1; }
+    .sm-loading {
+        text-align: center; padding: 16px 12px;
+        font-family: var(--mono); font-size: 0.625rem;
+        color: var(--text-muted); letter-spacing: 0.5px;
+    }
+    .sm-loader-wrap {
+        display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 20px 12px;
+    }
+    .sm-loader-bars {
+        display: flex; align-items: flex-end; gap: 3px; height: 36px;
+    }
+    .sm-loader-bars span {
+        display: block; width: 4px; border-radius: 2px;
+        background: var(--info); opacity: 0.4;
+        animation: smPulse 1.2s ease-in-out infinite;
+    }
+    .sm-loader-bars span:nth-child(1) { height: 40%; animation-delay: 0s; }
+    .sm-loader-bars span:nth-child(2) { height: 70%; animation-delay: 0.1s; }
+    .sm-loader-bars span:nth-child(3) { height: 100%; animation-delay: 0.2s; }
+    .sm-loader-bars span:nth-child(4) { height: 60%; animation-delay: 0.3s; }
+    .sm-loader-bars span:nth-child(5) { height: 85%; animation-delay: 0.4s; }
+    .sm-loader-bars span:nth-child(6) { height: 45%; animation-delay: 0.5s; }
+    .sm-loader-bars span:nth-child(7) { height: 75%; animation-delay: 0.6s; }
+    @keyframes smPulse {
+        0%, 100% { opacity: 0.25; transform: scaleY(0.6); }
+        50% { opacity: 1; transform: scaleY(1); }
+    }
+    .sm-loader-text {
+        font-family: var(--mono); font-size: 0.5625rem; color: var(--info);
+        letter-spacing: 1px; text-transform: uppercase;
+        animation: smFade 1.5s ease-in-out infinite;
+    }
+    @keyframes smFade {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; }
+    }
+    .sm-demo-tag {
+        font-family: var(--mono); font-size: 0.5rem; padding: 1px 5px;
+        border-radius: 3px; font-weight: 600; text-transform: uppercase;
+        background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border);
+    }
+    .sm-live-tag {
+        font-family: var(--mono); font-size: 0.5rem; padding: 1px 5px;
+        border-radius: 3px; font-weight: 600; text-transform: uppercase;
+        background: var(--operational-bg); color: var(--operational); border: 1px solid var(--operational-border);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: var(--gap-lg);">
+    <div>
+        <div class="page-title">لوحة المستهلك</div>
+        <div class="page-breadcrumb" style="margin-top: 2px;">CONSUMER INTELLIGENCE</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="page-breadcrumb">NAWWAR AI</span>
+        <span style="width: 5px; height: 5px; border-radius: 50%; background: var(--operational); box-shadow: 0 0 6px var(--operational);"></span>
+    </div>
+</div>
+
+<div class="app-layout fade-in">
+    <!-- ═══ Chat ═══ -->
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="chat-header-title">
+                <span class="chat-header-dot"></span>
+                <span class="chat-header-name">نوّر AI</span>
+                <span class="chat-header-ver">v2.0</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <a href="{% url 'dashboard:consumer-index' %}" style="font-size: 0.6875rem; color: var(--text-secondary); text-decoration: none; padding: 4px 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); transition: all 0.15s; font-family: var(--mono);" onmouseover="this.style.borderColor='var(--border-default)';this.style.color='var(--text-primary)'" onmouseout="this.style.borderColor='var(--border-subtle)';this.style.color='var(--text-secondary)'">+ محادثة جديدة</a>
+                <span class="panel-badge" style="background: var(--operational-bg); color: var(--operational); border: 1px solid var(--operational-border);">READY</span>
+            </div>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <div class="msg msg-system">
+                <div class="msg-avatar msg-avatar-system">نو</div>
+                <div class="msg-bubble">
+                    <div class="msg-bubble-title">مرحباً! أنا نوّر</div>
+                    <div style="color: var(--text-secondary);">مساعدك الذكي لإدارة استهلاك الكهرباء. اختر إجراءً أو اكتب سؤالك.</div>
+                    <div class="capabilities">
+                        <div class="cap-chip" data-action="scan">
+                            <span class="cap-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 7h6M9 11h6"/></svg></span>
+                            مسح فاتورة
+                        </div>
+                        <div class="cap-chip" data-action="voice">
+                            <span class="cap-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/></svg></span>
+                            سؤال صوتي
+                        </div>
+                        <div class="cap-chip" data-action="savings">
+                            <span class="cap-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 4c-3 0-9 1-12 6-2 3-2 7-1 10"/><path d="M12 22V12"/></svg></span>
+                            نصائح التوفير
+                        </div>
+                        <div class="cap-chip" data-action="tariff">
+                            <span class="cap-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="14" width="4" height="7" rx="1"/><rect x="10" y="9" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="17" rx="1"/></svg></span>
+                            شرح التعرفة
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% for msg in messages %}
+            <div class="msg msg-{% if msg.role == 'user' %}user{% else %}system{% endif %}">
+                <div class="msg-avatar {% if msg.role == 'user' %}msg-avatar-user{% else %}msg-avatar-system{% endif %}">{% if msg.role == 'user' %}أنت{% else %}نو{% endif %}</div>
+                <div class="msg-bubble">{{ msg.content|linebreaksbr }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="upload-bar" id="upload-bar">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--info)" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/></svg>
+            <span id="upload-filename"></span>
+            <button class="upload-bar-x" id="upload-cancel">&times;</button>
+        </div>
+        <div class="chat-input-wrap">
+            <div class="chat-input-bar">
+                <button class="input-btn" id="upload-btn" title="رفع فاتورة">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+                </button>
+                <button class="input-btn input-btn-voice" id="voice-btn" title="تحدث بالعربية">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/></svg>
+                </button>
+                <input type="text" class="chat-input" id="chat-input" placeholder="اكتب سؤالك هنا..." autocomplete="off">
+                <button class="input-btn input-btn-send" id="send-btn" title="إرسال">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                </button>
+            </div>
+        </div>
+        <input type="file" id="bill-file-input" accept="image/*,.pdf">
+    </div>
+
+    <!-- ═══ Sidebar ═══ -->
+    <div class="app-sidebar">
+        <div class="s-card">
+            <div class="s-card-body" style="display: flex; align-items: center; gap: 8px; padding: 10px var(--gap-lg);">
+                <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--operational); box-shadow: 0 0 6px var(--operational);"></span>
+                <span style="font-size: 0.75rem; color: var(--text-primary); font-weight: 500;">نوّر جاهز</span>
+                <span style="font-family: var(--mono); font-size: 0.5rem; color: var(--text-muted); margin-right: auto; text-transform: uppercase;">GPT-4o &bull; Claude &bull; Whisper</span>
+            </div>
+        </div>
+        <div class="s-card" id="tariff-card">
+            <div class="s-card-head"><span class="s-dot" style="background: #d4a843;"></span> التعرفة السكنية</div>
+            <div class="s-card-body">
+                <div class="t-strip" id="tariff-strip">
+                    <div class="t-seg" data-tier="1" style="flex: 160; background: #2ea043;"></div>
+                    <div class="t-seg" data-tier="2" style="flex: 140; background: #3fb950;"></div>
+                    <div class="t-seg" data-tier="3" style="flex: 200; background: #8dc572;"></div>
+                    <div class="t-seg" data-tier="4" style="flex: 100; background: #d29922;"></div>
+                    <div class="t-seg" data-tier="5" style="flex: 150; background: #e3b341;"></div>
+                    <div class="t-seg" data-tier="6" style="flex: 250; background: #f0883e;"></div>
+                    <div class="t-seg" data-tier="7" style="flex: 200; background: #da3633;"></div>
+                </div>
+                <div class="t-ticks" id="tariff-ticks">
+                    <span class="t-tick">265</span><span class="t-tick">188</span><span class="t-tick">158</span>
+                    <span class="t-tick">114</span><span class="t-tick">86</span><span class="t-tick">72</span><span class="t-tick">33</span>
+                </div>
+                <div style="margin-top: 8px; font-size: 0.6875rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+                    <span>فلس/كيلوواط ساعة</span>
+                    <span id="tariff-label" style="color: #d4a843; font-family: var(--mono); font-weight: 600;">--</span>
+                </div>
+            </div>
+        </div>
+        <div class="s-card" id="sm-card">
+            <div class="s-card-head">
+                <span class="s-dot" style="background: var(--info);"></span> العدّاد الذكي
+                <span id="sm-tag" class="sm-loading" style="margin-right: auto; padding: 0;"></span>
+            </div>
+            <div class="s-card-body" id="sm-body">
+                <div class="sm-loader-wrap">
+                    <div class="sm-loader-text" style="color:var(--text-muted)">أدخل رقم الملف في المحادثة لعرض بيانات العداد</div>
+                </div>
+            </div>
+        </div>
+        <div class="s-card">
+            <div class="s-card-head"><span class="s-dot" style="background: var(--operational);"></span> إجراءات سريعة</div>
+            <div class="s-card-body" style="display: flex; flex-direction: column; gap: 4px;">
+                <button class="qa" data-action="scan">مسح فاتورة جديدة <span class="qa-tag" style="background: var(--info-bg); color: var(--info);">scan</span></button>
+                <button class="qa" data-action="savings">تحليل التوفير <span class="qa-tag" style="background: var(--operational-bg); color: var(--operational);">ai</span></button>
+                <button class="qa" data-action="compare">مقارنة الاستهلاك <span class="qa-tag" style="background: var(--warning-bg); color: var(--warning);">beta</span></button>
+            </div>
+        </div>
+        <div class="s-card" style="margin-top: auto;">
+            <div class="s-card-body" style="font-size: 0.5625rem; color: var(--text-muted); font-family: var(--mono); line-height: 1.9; letter-spacing: 0.2px;">
+                <div style="display: flex; justify-content: space-between;"><span>VISION</span><span style="color: var(--text-secondary);">GPT-4o</span></div>
+                <div style="display: flex; justify-content: space-between;"><span>REASONING</span><span style="color: var(--text-secondary);">Claude</span></div>
+                <div style="display: flex; justify-content: space-between;"><span>SPEECH</span><span style="color: var(--text-secondary);">Whisper + Edge-TTS</span></div>
+                <div style="display: flex; justify-content: space-between;"><span>KNOWLEDGE</span><span style="color: var(--text-secondary);">ChromaDB RAG</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    'use strict';
+    var msgs = document.getElementById('chat-messages');
+    var inp = document.getElementById('chat-input');
+    var sendBtn = document.getElementById('send-btn');
+    var upBtn = document.getElementById('upload-btn');
+    var voiceBtn = document.getElementById('voice-btn');
+    var fileInp = document.getElementById('bill-file-input');
+    var upBar = document.getElementById('upload-bar');
+    var upName = document.getElementById('upload-filename');
+    var upCancel = document.getElementById('upload-cancel');
+    var rec = false, mr = null;
+    var sessionKey = '{{ session_key|default:"" }}';
+    var lastFileNumber = '{{ file_number|default:"" }}' || null;
+
+    function addMsg(t, h) {
+        var el = document.createElement('div');
+        el.className = 'msg msg-' + t;
+        var ac = t === 'system' ? 'msg-avatar-system' : 'msg-avatar-user';
+        var at = t === 'system' ? 'نو' : 'أنت';
+        el.innerHTML = '<div class="msg-avatar ' + ac + '">' + at + '</div><div class="msg-bubble">' + h + '</div>';
+        msgs.appendChild(el);
+        msgs.scrollTop = msgs.scrollHeight;
+    }
+    function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    function showTyping() {
+        var dot = document.createElement('div');
+        dot.className = 'msg msg-system'; dot.id = 'typing-ind';
+        dot.innerHTML = '<div class="msg-avatar msg-avatar-system">نو</div><div class="msg-bubble" style="color:var(--text-muted);font-family:var(--mono);font-size:0.75rem">...</div>';
+        msgs.appendChild(dot); msgs.scrollTop = msgs.scrollHeight;
+    }
+    function hideTyping() {
+        var ti = document.getElementById('typing-ind'); if (ti) ti.remove();
+    }
+
+    /* ── Text chat ── */
+    function send(text) {
+        if (!text.trim()) return;
+        addMsg('user', esc(text));
+        inp.value = '';
+        showTyping();
+
+        var payload = {message: text};
+        if (sessionKey) payload.session_key = sessionKey;
+        if (lastFileNumber) payload.file_number = lastFileNumber;
+
+        fetch('/nawwar/api/chat/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            hideTyping();
+            if (data.error && !data.reply) {
+                addMsg('system', '<span style="color:var(--critical)">عذراً، حدث خطأ في المعالجة. حاول مرة أخرى.</span>');
+                return;
+            }
+            var html = esc(data.reply).replace(/\n/g, '<br>');
+            if (data.processing_ms) {
+                html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-subtle);font-family:var(--mono);font-size:0.625rem;color:var(--text-muted)">'
+                    + (data.intent ? data.intent.toUpperCase() + ' &bull; ' : '') + data.processing_ms + 'ms</div>';
+            }
+            addMsg('system', html);
+
+            /* When chat returns a file_number, remember it and load sidebar */
+            if (data.file_number) {
+                lastFileNumber = data.file_number;
+                loadSmartMeter(data.file_number);
+            }
+        })
+        .catch(function() {
+            hideTyping();
+            addMsg('system', '<span style="color:var(--critical)">عذراً، تعذر الاتصال بالخادم. تحقق من اتصالك وحاول مرة أخرى.</span>');
+        });
+    }
+
+    if (sendBtn) sendBtn.addEventListener('click', function() { send(inp.value); });
+    if (inp) inp.addEventListener('keydown', function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(inp.value); } });
+
+    /* ── Bill scan (image upload) ── */
+    if (upBtn && fileInp) {
+        upBtn.addEventListener('click', function() { fileInp.click(); });
+        fileInp.addEventListener('change', function() {
+            if (!fileInp.files.length) return;
+            var f = fileInp.files[0];
+            if (f.size > 10485760) { addMsg('system', '<span style="color:var(--critical)">حجم الملف يتجاوز 10MB</span>'); return; }
+            upName.textContent = f.name + ' (' + (f.size/1024).toFixed(0) + ' KB)';
+            upBar.classList.add('show');
+            addMsg('user', 'مسح فاتورة: ' + esc(f.name));
+            showTyping();
+
+            var fd = new FormData();
+            fd.append('image', f);
+
+            fetch('/nawwar/api/chat/scan/', {
+                method: 'POST',
+                body: fd
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                hideTyping();
+                upBar.classList.remove('show');
+                fileInp.value = '';
+                if (data.error && !data.reply) {
+                    addMsg('system', '<span style="color:var(--critical)">فشل تحليل الفاتورة. تأكد من جودة الصورة وحاول مرة أخرى.</span>');
+                    return;
+                }
+                var html = '<div class="msg-bubble-title">تحليل الفاتورة</div>';
+                html += '<div style="font-size:0.8125rem;color:var(--text-secondary);line-height:1.8">' + esc(data.reply).replace(/\n/g, '<br>') + '</div>';
+
+                if (data.scan_result && Object.keys(data.scan_result).length) {
+                    var sr = data.scan_result;
+                    html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border-subtle);font-family:var(--mono);font-size:0.75rem;line-height:2">';
+                    if (sr.subscriber_number) html += '<div>رقم الاشتراك: <span style="color:var(--text-heading)">' + esc(String(sr.subscriber_number)) + '</span></div>';
+                    if (sr.consumption_kwh !== undefined) html += '<div>الاستهلاك: <span style="color:var(--text-heading)">' + esc(String(sr.consumption_kwh)) + ' kWh</span></div>';
+                    if (sr.amount_jod !== undefined) html += '<div>المبلغ: <span style="color:var(--text-heading)">' + esc(String(sr.amount_jod)) + ' JOD</span></div>';
+                    if (sr.billing_period) html += '<div>الفترة: <span style="color:var(--text-heading)">' + esc(String(sr.billing_period)) + '</span></div>';
+                    html += '</div>';
+
+                    /* Update sidebar account summary */
+                    var vals = document.querySelectorAll('.s-val');
+                    if (vals.length >= 2) {
+                        if (sr.amount_jod !== undefined) vals[0].textContent = sr.amount_jod;
+                        if (sr.consumption_kwh !== undefined) vals[1].textContent = sr.consumption_kwh;
+                    }
+                }
+                if (data.processing_ms) {
+                    html += '<div style="margin-top:8px;font-family:var(--mono);font-size:0.625rem;color:var(--info)">VISION PIPELINE &bull; ' + data.processing_ms + 'ms</div>';
+                }
+                addMsg('system', html);
+            })
+            .catch(function() {
+                hideTyping();
+                upBar.classList.remove('show');
+                fileInp.value = '';
+                addMsg('system', '<span style="color:var(--critical)">عذراً، تعذر الاتصال بالخادم. حاول مرة أخرى.</span>');
+            });
+        });
+    }
+    if (upCancel) upCancel.addEventListener('click', function() { upBar.classList.remove('show'); fileInp.value = ''; });
+
+    /* ── Voice recording ── */
+    if (voiceBtn) voiceBtn.addEventListener('click', function() { if (!rec) startR(); else stopR(); });
+    function startR() {
+        if (!navigator.mediaDevices) { addMsg('system', '<span style="color:var(--warning)">المتصفح لا يدعم التسجيل</span>'); return; }
+        navigator.mediaDevices.getUserMedia({audio:true}).then(function(s) {
+            rec = true; voiceBtn.classList.add('recording');
+            mr = new MediaRecorder(s); var ch = [];
+            mr.ondataavailable = function(e) { ch.push(e.data); };
+            mr.onstop = function() {
+                s.getTracks().forEach(function(t){t.stop();});
+                var blob = new Blob(ch, {type: 'audio/webm'});
+                addMsg('user', '<span style="font-family:var(--mono);font-size:0.75rem">رسالة صوتية</span>');
+                showTyping();
+
+                var fd = new FormData();
+                fd.append('audio', blob, 'recording.webm');
+
+                fetch('/nawwar/api/chat/voice/', {
+                    method: 'POST',
+                    body: fd
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    hideTyping();
+                    if (data.error && !data.reply) {
+                        addMsg('system', '<span style="color:var(--critical)">فشلت معالجة الرسالة الصوتية. حاول مرة أخرى.</span>');
+                        return;
+                    }
+                    var html = '<div class="msg-bubble-title">الرد الصوتي</div>';
+                    if (data.transcript) {
+                        html += '<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px;font-family:var(--mono)">النص: ' + esc(data.transcript) + '</div>';
+                    }
+                    html += '<div style="font-size:0.8125rem;color:var(--text-secondary);line-height:1.8">' + esc(data.reply).replace(/\n/g, '<br>') + '</div>';
+                    if (data.intent) {
+                        html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-subtle);font-family:var(--mono);font-size:0.625rem;color:var(--info)">VOICE PIPELINE &bull; ' + data.intent.toUpperCase() + '</div>';
+                    }
+                    addMsg('system', html);
+
+                    /* Play TTS audio response */
+                    if (data.audio_b64) {
+                        try {
+                            var audio = new Audio('data:audio/mp3;base64,' + data.audio_b64);
+                            audio.play().catch(function() {});
+                        } catch(e) {}
+                    }
+                })
+                .catch(function() {
+                    hideTyping();
+                    addMsg('system', '<span style="color:var(--critical)">عذراً، تعذر الاتصال بالخادم. حاول مرة أخرى.</span>');
+                });
+            };
+            mr.start();
+        }).catch(function() { addMsg('system', '<span style="color:var(--warning)">تم رفض إذن الميكروفون</span>'); });
+    }
+    function stopR() { rec = false; voiceBtn.classList.remove('recording'); if (mr && mr.state !== 'inactive') mr.stop(); }
+
+    /* ── Capability chips & quick actions ── */
+    document.querySelectorAll('[data-action]').forEach(function(el) {
+        el.addEventListener('click', function() {
+            var a = el.dataset.action;
+            if (a === 'scan') fileInp.click();
+            else if (a === 'voice') startR();
+            else if (a === 'savings') send('أريد نصائح لتوفير الكهرباء');
+            else if (a === 'tariff') send('اشرح لي التعرفة السكنية للكهرباء');
+            else if (a === 'compare') send('أريد مقارنة استهلاكي');
+        });
+    });
+
+    /* ══════════════════════════════════════════════════
+       Smart Meter + Tariff — Auto-load real data
+       ══════════════════════════════════════════════════ */
+    function updateTariff(kwh) {
+        var tiers = [
+            { max: 160, label: 'T1: 1-160', rate: 33, idx: 0 },
+            { max: 300, label: 'T2: 161-300', rate: 72, idx: 1 },
+            { max: 500, label: 'T3: 301-500', rate: 86, idx: 2 },
+            { max: 600, label: 'T4: 501-600', rate: 114, idx: 3 },
+            { max: 750, label: 'T5: 601-750', rate: 158, idx: 4 },
+            { max: 1000, label: 'T6: 751-1000', rate: 188, idx: 5 },
+            { max: Infinity, label: 'T7: 1000+', rate: 265, idx: 6 },
+        ];
+        var tier = tiers[tiers.length - 1];
+        for (var i = 0; i < tiers.length; i++) {
+            if (kwh <= tiers[i].max) { tier = tiers[i]; break; }
+        }
+        var label = document.getElementById('tariff-label');
+        if (label) label.textContent = tier.label;
+
+        /* Highlight active tick */
+        var ticks = document.querySelectorAll('#tariff-ticks .t-tick');
+        ticks.forEach(function(t) { t.classList.remove('on'); });
+        if (ticks[6 - tier.idx]) ticks[6 - tier.idx].classList.add('on');
+
+        /* Highlight active tier segment */
+        var segs = document.querySelectorAll('#tariff-strip .t-seg');
+        segs.forEach(function(s) { s.style.opacity = '0.3'; });
+        if (segs[tier.idx]) segs[tier.idx].style.opacity = '1';
+    }
+
+    function loadSmartMeter(fileNumber) {
+        var body = document.getElementById('sm-body');
+        var tag = document.getElementById('sm-tag');
+        if (!body) return;
+
+        /* Show loading animation */
+        body.innerHTML = '<div class="sm-loader-wrap"><div class="sm-loader-bars"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><div class="sm-loader-text">جاري تحميل بيانات العداد...</div></div>';
+        tag.innerHTML = '';
+
+        var url = '/nawwar/api/jepco/account-summary/';
+        if (fileNumber) url += '?file_number=' + encodeURIComponent(fileNumber);
+
+        fetch(url)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var sm = data.smartMeter;
+            if (!sm || !sm.showSmartMeterFeature) {
+                body.innerHTML = '<div class="sm-loader-wrap"><div class="sm-loader-text" style="color:var(--text-muted)">أدخل رقم الملف في المحادثة لعرض بيانات العداد</div></div>';
+                tag.innerHTML = '';
+                return;
+            }
+
+            tag.innerHTML = data.is_demo
+                ? '<span class="sm-demo-tag">DEMO</span>'
+                : '<span class="sm-live-tag">LIVE</span>';
+
+            /* Update tariff based on expected consumption */
+            var expKwh = parseFloat(sm.expectedElectricityConsumptionQuntity) || 0;
+            updateTariff(expKwh);
+
+            var currentKwh = sm.currentElectricityConsumptionQuntity || '0';
+            var expectedKwh = sm.expectedElectricityConsumptionQuntity || '0';
+            var currentBill = sm.expectedElectricityCurrentBillAmount || '0';
+            var endBill = sm.expectedElectricityEndofMonthBillAmount || '0';
+            var days = sm.numberOfConsumptionDaysSinceLastRead || '0';
+            var lastReading = sm.lastBillReading || '--';
+            var curReading = sm.currentReading || '--';
+            var comp = sm.comparazinConsumption || {};
+
+            /* ── Subscriber info card ── */
+            var sub = data.subscriber;
+            var html = '';
+            if (sub && sub.name) {
+                html += '<div style="padding:6px 0 8px;border-bottom:1px solid var(--border-subtle);margin-bottom:8px">';
+                html += '<div style="font-size:0.75rem;font-weight:600;color:var(--text-heading)">' + esc(sub.name) + '</div>';
+                html += '<div style="font-family:var(--mono);font-size:0.6rem;color:var(--text-muted);margin-top:2px">';
+                html += esc(sub.subscriptionType || '') + ' \u00B7 ' + esc(sub.office || '');
+                html += '</div>';
+                if (sub.meterNumber) {
+                    html += '<div style="font-family:var(--mono);font-size:0.55rem;color:var(--text-muted);margin-top:1px">METER: ' + esc(sub.meterNumber) + ' (' + esc(sub.meterType || '') + ')</div>';
+                }
+                var bal = parseFloat(sub.balance) || 0;
+                html += '<div style="font-size:0.6rem;margin-top:2px;color:' + (bal > 0 ? 'var(--danger)' : 'var(--success)') + '">';
+                html += bal > 0 ? ('\u25CF ' + sub.balance + ' JOD DUE') : '\u25CF لا يوجد مبالغ مستحقة';
+                html += '</div></div>';
+            }
+
+            /* ── Main stats ── */
+            html += '<div class="sm-grid">';
+            html += '<div class="sm-cell"><div class="sm-val">' + currentBill + '</div><div class="sm-lbl">JOD BILL EST.</div></div>';
+            html += '<div class="sm-cell"><div class="sm-val">' + currentKwh + '</div><div class="sm-lbl">kWh (' + days + ' DAY)</div></div>';
+            html += '<div class="sm-cell"><div class="sm-val" style="color:var(--warning)">' + endBill + '</div><div class="sm-lbl">JOD END-MONTH</div></div>';
+            html += '<div class="sm-cell"><div class="sm-val" style="color:var(--info)">' + expectedKwh + '</div><div class="sm-lbl">kWh PROJECTED</div></div>';
+            html += '</div>';
+
+            /* ── Consumption comparison bars ── */
+            if (comp.expectedMonthConsumption) {
+                var cur = parseFloat(comp.expectedMonthConsumption) || 1;
+                var last = parseFloat(comp.lastMonthconsumption) || 0;
+                var yr = parseFloat(comp.lastYearconsumption) || 0;
+                var maxV = Math.max(cur, last, yr);
+
+                html += '<div class="sm-bar-wrap">';
+                html += '<div class="sm-bar-row"><span class="sm-bar-label">THIS</span><div class="sm-bar-track"><div class="sm-bar-fill" style="width:' + (cur/maxV*100) + '%;background:var(--info)"></div></div><span class="sm-bar-val">' + comp.expectedMonthConsumption + '</span></div>';
+                html += '<div class="sm-bar-row"><span class="sm-bar-label">PREV</span><div class="sm-bar-track"><div class="sm-bar-fill" style="width:' + (last/maxV*100) + '%;background:var(--warning)"></div></div><span class="sm-bar-val">' + comp.lastMonthconsumption + '</span></div>';
+                html += '<div class="sm-bar-row"><span class="sm-bar-label">YR AGO</span><div class="sm-bar-track"><div class="sm-bar-fill" style="width:' + (yr/maxV*100) + '%;background:var(--text-muted)"></div></div><span class="sm-bar-val">' + comp.lastYearconsumption + '</span></div>';
+                html += '</div>';
+            }
+
+            /* ── Daily consumption mini chart ── */
+            var daily = sm.consumptionMonthlyList || [];
+            if (daily.length > 0) {
+                // Sort by date ascending
+                daily.sort(function(a,b) { return (a.date||a.consumptionDate||'').localeCompare(b.date||b.consumptionDate||''); });
+                var maxD = 1;
+                for (var i = 0; i < daily.length; i++) {
+                    var v = parseFloat(daily[i].consumptionAtDate || daily[i].consumptionQuntity) || 0;
+                    if (v > maxD) maxD = v;
+                }
+                html += '<div class="sm-chart-mini">';
+                for (var j = 0; j < daily.length; j++) {
+                    var dDate = daily[j].date || daily[j].consumptionDate || '';
+                    var dVal = daily[j].consumptionAtDate || daily[j].consumptionQuntity || '0';
+                    var dv = parseFloat(dVal) || 0;
+                    var pct = (dv / maxD * 100);
+                    html += '<div class="sm-chart-bar" style="height:' + pct + '%" title="' + dDate + ': ' + dVal + ' kWh"></div>';
+                }
+                html += '</div>';
+                var firstDate = (daily[0].date || daily[0].consumptionDate || '').slice(5);
+                var lastDate = (daily[daily.length-1].date || daily[daily.length-1].consumptionDate || '').slice(5);
+                html += '<div style="display:flex;justify-content:space-between;margin-top:3px;font-family:var(--mono);font-size:0.5rem;color:var(--text-muted)"><span>' + firstDate + '</span><span>DAILY kWh</span><span>' + lastDate + '</span></div>';
+            }
+
+            /* ── Meter readings ── */
+            html += '<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border-subtle)">';
+            html += '<div class="sm-reading"><span class="sm-reading-label">LAST BILL</span><span class="sm-reading-val">' + lastReading + '</span></div>';
+            html += '<div class="sm-reading"><span class="sm-reading-label">CURRENT</span><span class="sm-reading-val">' + curReading + '</span></div>';
+            html += '</div>';
+
+            body.innerHTML = html;
+        })
+        .catch(function(err) {
+            body.innerHTML = '<div class="sm-loader-wrap"><div class="sm-loader-text" style="color:var(--warning)">فشل تحميل البيانات</div></div>';
+            tag.innerHTML = '';
+        });
+    }
+
+    /* Auto-scroll to bottom if there are stored messages */
+    msgs.scrollTop = msgs.scrollHeight;
+
+    /* Initial load — use stored file number if available */
+    loadSmartMeter(lastFileNumber || undefined);
+})();
+</script>
+{% endblock %}

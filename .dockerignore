@@ -1,0 +1,15 @@
+venv/
+__pycache__/
+*.pyc
+.git/
+.env
+*.sqlite3
+chromadb_data/
+node_modules/
+.vscode/
+*.md
+drive-download-*/
+api_recon/
+tasks/
+logs/
+media/

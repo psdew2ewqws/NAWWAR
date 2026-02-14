@@ -1,0 +1,850 @@
+{% extends "dashboard/nawwar_base.html" %}
+{% load nawwar_tags %}
+
+{% block nav_ops %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Plant Detail — Minimal Professional (matches operations/index.html) */
+
+    /* Back link */
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 0.75rem;
+        font-weight: 500;
+        font-family: var(--mono);
+        margin-bottom: var(--gap-lg);
+        transition: color 0.15s;
+        letter-spacing: 0.2px;
+    }
+    .back-link:hover { color: var(--text-secondary); }
+    .back-link svg { width: 12px; height: 12px; stroke-width: 2; }
+
+    /* Detail Header */
+    .detail-header {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        padding: var(--gap-xl) var(--gap-2xl);
+        margin-bottom: var(--gap-xl);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: relative;
+        transition: border-color 0.2s;
+    }
+    .detail-header:hover { border-color: var(--border-default); }
+
+    /* Thin status line on right side — matches plant-card from index */
+    .detail-header::before {
+        content: '';
+        position: absolute;
+        top: 8px;
+        right: 0;
+        width: 2px;
+        height: calc(100% - 16px);
+        border-radius: 1px;
+    }
+    .detail-header.hdr-online::before { background: var(--operational); opacity: 0.5; }
+    .detail-header.hdr-offline::before { background: var(--critical); opacity: 0.5; }
+    .detail-header.hdr-maintenance::before { background: var(--warning); opacity: 0.5; }
+    .detail-header.hdr-derated::before { background: var(--warning); opacity: 0.5; }
+
+    .detail-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--text-heading);
+        letter-spacing: -0.2px;
+    }
+    .detail-subtitle {
+        font-family: var(--mono);
+        font-size: 0.625rem;
+        color: var(--text-muted);
+        margin-top: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        letter-spacing: 0.2px;
+    }
+    .detail-stats {
+        display: flex;
+        gap: 24px;
+        align-items: center;
+    }
+    .detail-stat { text-align: center; }
+    .detail-stat-value {
+        font-family: var(--mono);
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-heading);
+        line-height: 1;
+        letter-spacing: -0.5px;
+    }
+    .detail-stat-label {
+        font-size: 0.5rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 4px;
+        font-family: var(--mono);
+    }
+    .detail-status-tag {
+        font-family: var(--mono);
+        font-size: 0.5rem;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Section Headers — simple, no gradient line */
+    .section-head {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: var(--gap-md);
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        letter-spacing: -0.1px;
+    }
+    .section-head svg { width: 13px; height: 13px; stroke-width: 1.5; color: var(--text-muted); opacity: 0.6; }
+    .section-head-count {
+        font-family: var(--mono);
+        font-size: 0.5rem;
+        color: var(--text-muted);
+        letter-spacing: 0.3px;
+        margin-right: auto;
+    }
+
+    /* Turbine Grid */
+    .turbine-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: var(--gap-md);
+        margin-bottom: var(--gap-xl);
+    }
+    .turbine-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        padding: var(--gap-lg);
+        transition: all 0.2s ease;
+    }
+    .turbine-card:hover {
+        border-color: var(--border-default);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .turbine-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: var(--gap-sm);
+    }
+    .turbine-id {
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text-heading);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .turbine-status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+    }
+    .dot-online { background: var(--operational); }
+    .dot-offline { background: var(--critical); }
+    .dot-maintenance { background: var(--warning); }
+    .dot-trip { background: var(--critical); animation: pulse-dot 1s ease-in-out infinite; }
+
+    .turbine-meta {
+        display: flex;
+        gap: 12px;
+        margin-bottom: var(--gap-sm);
+        font-family: var(--mono);
+        font-size: 0.5625rem;
+        color: var(--text-muted);
+        letter-spacing: 0.2px;
+    }
+
+    .anomaly-badge {
+        font-family: var(--mono);
+        font-size: 0.5rem;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-weight: 500;
+        letter-spacing: 0.3px;
+    }
+
+    .sensor-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 4px;
+        margin-top: var(--gap-sm);
+    }
+    .sensor-item {
+        background: var(--bg-base);
+        border-radius: var(--radius-sm);
+        padding: 6px 10px;
+        border: 1px solid transparent;
+    }
+    .sensor-item.anomaly { border-color: var(--critical-border); background: rgba(218,54,51,0.04); }
+    .sensor-value {
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text-heading);
+    }
+    .sensor-label {
+        font-size: 0.5rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-family: var(--mono);
+    }
+
+    /* Panels — clean, no gradient accents */
+    .panel { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); overflow: hidden; }
+    .panel-header { padding: var(--gap-md) var(--gap-lg); border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; }
+    .panel-title { font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; letter-spacing: -0.1px; }
+    .panel-title svg { width: 13px; height: 13px; stroke-width: 1.5; color: var(--text-muted); opacity: 0.6; }
+    .panel-badge { font-family: var(--mono); font-size: 0.5rem; padding: 2px 8px; border-radius: 3px; font-weight: 500; letter-spacing: 0.3px; background: rgba(99,110,123,0.06); color: var(--text-muted); border: 1px solid rgba(99,110,123,0.1); }
+    .panel-body { padding: var(--gap-lg); }
+    .panel-body-flush { padding: 0; }
+
+    .chart-wrapper { position: relative; width: 100%; height: 260px; }
+
+    /* Charts + emissions grid */
+    .detail-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap-md); }
+    @media (max-width: 1200px) { .detail-grid-2 { grid-template-columns: 1fr; } }
+
+    /* Gauge */
+    .gauge-row { display: flex; gap: var(--gap-2xl); justify-content: center; padding: var(--gap-sm) 0; }
+    .gauge-item { text-align: center; flex: 1; }
+    .gauge-ring-container { position: relative; width: 90px; height: 90px; margin: 0 auto var(--gap-sm); }
+    .gauge-ring-container svg { transform: rotate(-90deg); }
+    .gauge-center-value { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: var(--mono); font-size: 0.8125rem; font-weight: 700; color: var(--text-heading); }
+    .gauge-limit { font-family: var(--mono); font-size: 0.5625rem; color: var(--text-muted); }
+    .gauge-name { font-size: 0.6875rem; color: var(--text-secondary); margin-top: var(--gap-xs); font-weight: 500; }
+
+    /* Table — matches index */
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th { font-size: 0.5rem; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: var(--gap-sm) var(--gap-lg); border-bottom: 1px solid var(--border-subtle); text-align: right; font-family: var(--mono); }
+    .data-table td { padding: 10px var(--gap-lg); border-bottom: 1px solid var(--border-subtle); font-size: 0.75rem; }
+    .data-table tr:hover td { background: var(--bg-elevated); }
+
+    /* Severity badges — matches index */
+    .badge-severity-critical { background: rgba(218,54,51,0.06); color: var(--critical); }
+    .badge-severity-high { background: rgba(210,153,34,0.06); color: var(--warning); }
+    .badge-severity-medium { background: rgba(56,139,253,0.06); color: var(--text-secondary); }
+    .badge-severity-low { background: rgba(99,110,123,0.06); color: var(--text-muted); }
+
+    .compliance-tag { font-family: var(--mono); font-size: 0.5rem; padding: 2px 8px; border-radius: 3px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.4px; }
+    .tag-compliant { background: rgba(46,160,67,0.06); color: var(--operational); }
+    .tag-exceeds { background: rgba(218,54,51,0.06); color: var(--critical); }
+
+    /* Prediction confidence */
+    .prediction-confidence { font-family: var(--mono); font-size: 0.75rem; font-weight: 600; min-width: 42px; text-align: center; }
+
+    /* Status tags — same subtle opacity as index */
+    .plant-status-tag { font-family: var(--mono); font-size: 0.5rem; padding: 2px 8px; border-radius: 3px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(99,110,123,0.08); color: var(--text-muted); border: 1px solid rgba(99,110,123,0.12); }
+    .tag-online { background: rgba(46,160,67,0.06); color: var(--operational); border-color: rgba(46,160,67,0.12); }
+    .tag-offline { background: rgba(218,54,51,0.06); color: var(--critical); border-color: rgba(218,54,51,0.12); }
+    .tag-maintenance { background: rgba(210,153,34,0.06); color: var(--warning); border-color: rgba(210,153,34,0.12); }
+    .tag-derated { background: rgba(210,153,34,0.06); color: var(--warning); border-color: rgba(210,153,34,0.12); }
+
+    .alert-severity-tag { font-family: var(--mono); font-size: 0.5rem; padding: 1px 6px; border-radius: 3px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.4px; flex-shrink: 0; }
+
+    /* Section spacing */
+    .section-gap { margin-top: var(--gap-xl); }
+
+    /* Subtle fade-in — 6px fadeUp matching index */
+    .fade-up { animation: fadeUp 0.3s ease both; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .d1 { animation-delay: 0.03s; } .d2 { animation-delay: 0.06s; } .d3 { animation-delay: 0.09s; } .d4 { animation-delay: 0.12s; } .d5 { animation-delay: 0.15s; }
+
+    .empty-state { text-align: center; padding: 40px var(--gap-xl); color: var(--text-muted); font-size: 0.75rem; }
+
+    @media (max-width: 768px) {
+        .detail-header { flex-direction: column; gap: var(--gap-lg); align-items: flex-start; }
+        .detail-stats { flex-wrap: wrap; gap: var(--gap-lg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Back Link -->
+<a href="{% url 'dashboard:operations-index' %}" class="back-link fade-up d1">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+    OPERATIONS CENTER
+</a>
+
+<!-- Plant Header -->
+<div class="detail-header hdr-{{ plant.status }} fade-up d1">
+    <div>
+        <div class="detail-title">{{ plant.name_ar|default:plant.name }}</div>
+        <div class="detail-subtitle">
+            <span>{{ plant.code }}</span>
+            <span>&middot;</span>
+            <span>{{ plant.get_plant_type_display }}</span>
+            <span>&middot;</span>
+            <span>{{ plant.fuel_type }}</span>
+            {% if plant.commissioned_year %}
+            <span>&middot;</span>
+            <span>EST. {{ plant.commissioned_year }}</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="detail-stats">
+        <div class="detail-stat">
+            <div class="detail-stat-value">{{ plant.current_load_mw|floatformat:0 }}<span style="font-size: 0.625rem; font-weight: 400; color: var(--text-muted); margin-right: 2px;">MW</span></div>
+            <div class="detail-stat-label">Load</div>
+        </div>
+        <div class="detail-stat">
+            <div class="detail-stat-value">{{ plant.capacity_mw|floatformat:0 }}<span style="font-size: 0.625rem; font-weight: 400; color: var(--text-muted); margin-right: 2px;">MW</span></div>
+            <div class="detail-stat-label">Capacity</div>
+        </div>
+        <div class="detail-stat">
+            <div class="detail-stat-value" style="color: {% if load_pct > 90 %}var(--critical){% elif load_pct > 70 %}var(--warning){% else %}var(--text-heading){% endif %};">{{ load_pct }}%</div>
+            <div class="detail-stat-label">Load Factor</div>
+        </div>
+        <div class="detail-stat">
+            <div class="detail-stat-value">{{ plant.efficiency_percent|floatformat:1 }}%</div>
+            <div class="detail-stat-label">Efficiency</div>
+        </div>
+        <span class="detail-status-tag tag-{{ plant.status }}">{{ plant.get_status_display|upper }}</span>
+    </div>
+</div>
+
+<!-- Turbine Cards Grid -->
+<div class="section-head fade-up d2">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="2" fill="currentColor" opacity="0.4"/><path d="M12 2v8M20.5 17L13 13M3.5 17l7.5-4" stroke-width="2" stroke-linecap="round"/></svg>
+    Turbine Units — الوحدات
+    <span class="section-head-count">{{ turbine_data|length }} UNITS</span>
+</div>
+
+<div class="turbine-grid fade-up d2">
+    {% for td in turbine_data %}
+    <div class="turbine-card">
+        <div class="turbine-header">
+            <div class="turbine-id">
+                <span class="turbine-status-dot dot-{{ td.turbine.status }}"></span>
+                {{ td.turbine.turbine_id }}
+                {% if td.turbine.name %}<span style="font-weight: 400; color: var(--text-muted); font-size: 0.625rem;">{{ td.turbine.name }}</span>{% endif %}
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                {% if td.anomaly_count > 0 %}
+                <span class="anomaly-badge badge-severity-high">{{ td.anomaly_count }} ANOMALY</span>
+                {% endif %}
+                <span class="plant-status-tag tag-{{ td.turbine.status }}">{{ td.turbine.get_status_display }}</span>
+            </div>
+        </div>
+
+        <div class="turbine-meta">
+            <span>{{ td.turbine.capacity_mw|floatformat:0 }} MW</span>
+            <span>&middot;</span>
+            <span>{{ td.turbine.hours_since_maintenance }}h since maint.</span>
+        </div>
+
+        <div class="sensor-grid">
+            {% if td.latest.vibration is not None %}
+            <div class="sensor-item {% if td.latest.vibration > 7 %}anomaly{% endif %}">
+                <div class="sensor-label">Vibration</div>
+                <div class="sensor-value">{{ td.latest.vibration|floatformat:2 }} <span style="font-size: 0.5rem; color: var(--text-muted);">mm/s</span></div>
+            </div>
+            {% endif %}
+            {% if td.latest.temperature is not None %}
+            <div class="sensor-item {% if td.latest.temperature > 550 %}anomaly{% endif %}">
+                <div class="sensor-label">Temperature</div>
+                <div class="sensor-value">{{ td.latest.temperature|floatformat:0 }} <span style="font-size: 0.5rem; color: var(--text-muted);">&deg;C</span></div>
+            </div>
+            {% endif %}
+            {% if td.latest.pressure is not None %}
+            <div class="sensor-item">
+                <div class="sensor-label">Pressure</div>
+                <div class="sensor-value">{{ td.latest.pressure|floatformat:1 }} <span style="font-size: 0.5rem; color: var(--text-muted);">bar</span></div>
+            </div>
+            {% endif %}
+            {% if td.latest.rpm is not None %}
+            <div class="sensor-item">
+                <div class="sensor-label">RPM</div>
+                <div class="sensor-value">{{ td.latest.rpm|floatformat:0 }}</div>
+            </div>
+            {% endif %}
+            {% if td.latest.exhaust_temp is not None %}
+            <div class="sensor-item {% if td.latest.exhaust_temp > 600 %}anomaly{% endif %}">
+                <div class="sensor-label">Exhaust Temp</div>
+                <div class="sensor-value">{{ td.latest.exhaust_temp|floatformat:0 }} <span style="font-size: 0.5rem; color: var(--text-muted);">&deg;C</span></div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state" style="grid-column: 1 / -1;">
+        <div>لا توجد وحدات مسجّلة لهذه المحطة</div>
+        <div style="font-size: 0.625rem; color: var(--text-muted); margin-top: 4px; font-family: var(--mono);">NO TURBINE UNITS REGISTERED</div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Vibration & Temperature Charts -->
+{% if turbine_data %}
+<div class="detail-grid-2 section-gap fade-up d3">
+    <!-- Vibration Time Series -->
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M2 12c2 0 2-4 4-4s2 8 4 8 2-10 4-10 2 8 4 8 2-4 4-4"/></svg>
+                Vibration (mm/s) — الاهتزاز
+            </div>
+            <span class="panel-badge">24H</span>
+        </div>
+        <div class="panel-body">
+            <div class="chart-wrapper">
+                <canvas id="vibrationChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Temperature Time Series -->
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
+                Temperature (&deg;C) — درجة الحرارة
+            </div>
+            <span class="panel-badge">24H</span>
+        </div>
+        <div class="panel-body">
+            <div class="chart-wrapper">
+                <canvas id="temperatureChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Emissions Gauges + Heat Rate -->
+<div class="detail-grid-2 section-gap fade-up d4">
+    <!-- Emissions Radial Gauges -->
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                Emissions vs Limits — الانبعاثات
+            </div>
+            {% if emission_data.compliant %}
+            <span class="compliance-tag tag-compliant">Compliant</span>
+            {% elif emission_data %}
+            <span class="compliance-tag tag-exceeds">Exceeds</span>
+            {% else %}
+            <span class="panel-badge">N/A</span>
+            {% endif %}
+        </div>
+        <div class="panel-body">
+            {% if emission_data %}
+            <div class="gauge-row" id="emissions-gauges">
+                <!-- NOx Gauge -->
+                <div class="gauge-item">
+                    <div class="gauge-ring-container">
+                        <svg width="90" height="90" viewBox="0 0 90 90">
+                            <circle cx="45" cy="45" r="38" fill="none" stroke="var(--bg-base)" stroke-width="5"/>
+                            <circle cx="45" cy="45" r="38" fill="none" stroke-width="5" stroke-linecap="round"
+                                id="gauge-nox-ring" stroke="var(--text-muted)"
+                                stroke-dasharray="0 238.76" />
+                        </svg>
+                        <div class="gauge-center-value" id="gauge-nox-val">--</div>
+                    </div>
+                    <div class="gauge-name">NOx</div>
+                    <div class="gauge-limit" id="gauge-nox-limit">-- ppm</div>
+                </div>
+                <!-- CO2 Gauge -->
+                <div class="gauge-item">
+                    <div class="gauge-ring-container">
+                        <svg width="90" height="90" viewBox="0 0 90 90">
+                            <circle cx="45" cy="45" r="38" fill="none" stroke="var(--bg-base)" stroke-width="5"/>
+                            <circle cx="45" cy="45" r="38" fill="none" stroke-width="5" stroke-linecap="round"
+                                id="gauge-co2-ring" stroke="var(--text-muted)"
+                                stroke-dasharray="0 238.76" />
+                        </svg>
+                        <div class="gauge-center-value" id="gauge-co2-val">--</div>
+                    </div>
+                    <div class="gauge-name">CO&#8322;</div>
+                    <div class="gauge-limit" id="gauge-co2-limit">-- t</div>
+                </div>
+                <!-- SOx Gauge -->
+                <div class="gauge-item">
+                    <div class="gauge-ring-container">
+                        <svg width="90" height="90" viewBox="0 0 90 90">
+                            <circle cx="45" cy="45" r="38" fill="none" stroke="var(--bg-base)" stroke-width="5"/>
+                            <circle cx="45" cy="45" r="38" fill="none" stroke-width="5" stroke-linecap="round"
+                                id="gauge-sox-ring" stroke="var(--text-muted)"
+                                stroke-dasharray="0 238.76" />
+                        </svg>
+                        <div class="gauge-center-value" id="gauge-sox-val">--</div>
+                    </div>
+                    <div class="gauge-name">SOx</div>
+                    <div class="gauge-limit" id="gauge-sox-limit">-- ppm</div>
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div>لا تتوفر بيانات انبعاثات</div>
+                <div style="font-size: 0.625rem; color: var(--text-muted); margin-top: 4px; font-family: var(--mono);">NO EMISSIONS DATA</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Heat Rate Trend -->
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M3 20l5-8 4 4 9-13"/></svg>
+                Heat Rate Trend — معدل الحرارة
+            </div>
+            <span class="panel-badge">BTU/kWh</span>
+        </div>
+        <div class="panel-body">
+            <div class="chart-wrapper">
+                <canvas id="heatRateChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Maintenance Predictions -->
+<div class="section-gap fade-up d5">
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                Maintenance Predictions — تنبؤات الصيانة
+            </div>
+            <span class="panel-badge">{{ predictions|length }}</span>
+        </div>
+        <div class="panel-body-flush">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Unit</th>
+                        <th>Type</th>
+                        <th>Severity</th>
+                        <th>Confidence</th>
+                        <th>Predicted Date</th>
+                        <th>Recommended Action</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pred in predictions %}
+                    <tr>
+                        <td>
+                            <span style="font-family: var(--mono); font-weight: 600; color: var(--text-heading);">{{ pred.turbine.turbine_id }}</span>
+                        </td>
+                        <td>{{ pred.get_prediction_type_display }}</td>
+                        <td>
+                            <span class="alert-severity-tag badge-severity-{{ pred.severity }}">{{ pred.severity|upper }}</span>
+                        </td>
+                        <td>
+                            <span class="prediction-confidence" style="color: {% if pred.confidence >= 80 %}var(--critical){% elif pred.confidence >= 50 %}var(--warning){% else %}var(--text-secondary){% endif %};">
+                                {{ pred.confidence|floatformat:0 }}%
+                            </span>
+                        </td>
+                        <td style="font-family: var(--mono); font-size: 0.6875rem;">{{ pred.predicted_failure_date|date:"Y-m-d" }}</td>
+                        <td style="max-width: 250px; font-size: 0.6875rem; color: var(--text-secondary);">
+                            {{ pred.recommended_action_ar|default:pred.recommended_action|truncatewords:12 }}
+                        </td>
+                        <td>
+                            {% if pred.is_acknowledged %}
+                            <span class="plant-status-tag tag-online">ACK</span>
+                            {% else %}
+                            <span class="plant-status-tag tag-maintenance">NEW</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7">
+                            <div class="empty-state" style="padding: 24px;">
+                                <div>لا توجد تنبؤات صيانة</div>
+                                <div style="font-size: 0.625rem; color: var(--text-muted); margin-top: 4px; font-family: var(--mono);">ALL SYSTEMS NOMINAL</div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    'use strict';
+
+    // Emissions Data
+    var emissionData = {{ emission_data_json|safe }};
+
+    if (emissionData && emissionData.nox) {
+        var circumference = 2 * Math.PI * 38;
+
+        function setGauge(type, val, limit) {
+            var pct = Math.min(val / limit, 1.2);
+            var dashLen = pct * circumference;
+            // Semantic color only for compliance status
+            var color = pct > 1 ? 'var(--critical)' : pct > 0.8 ? 'var(--warning)' : 'var(--text-secondary)';
+
+            var ring = document.getElementById('gauge-' + type + '-ring');
+            var valEl = document.getElementById('gauge-' + type + '-val');
+            var limitEl = document.getElementById('gauge-' + type + '-limit');
+
+            if (ring) {
+                ring.style.stroke = color;
+                ring.style.transition = 'stroke-dasharray 1s ease-out';
+                setTimeout(function() {
+                    ring.setAttribute('stroke-dasharray', dashLen + ' ' + circumference);
+                }, 100);
+            }
+            if (valEl) valEl.textContent = val.toFixed(1);
+            if (limitEl) {
+                var unit = type === 'co2' ? ' t' : ' ppm';
+                limitEl.textContent = '/ ' + limit.toFixed(0) + unit;
+            }
+        }
+
+        setGauge('nox', emissionData.nox.value, emissionData.nox.limit);
+        setGauge('co2', emissionData.co2.value, emissionData.co2.limit);
+        setGauge('sox', emissionData.sox.value, emissionData.sox.limit);
+    }
+
+    // Vibration Chart — monochrome palette
+    var vibDatasets = [];
+    var vibLabels = [];
+    var vibColors = ['rgba(201, 209, 217, 0.7)', 'rgba(201, 209, 217, 0.45)', 'rgba(201, 209, 217, 0.3)', 'rgba(201, 209, 217, 0.2)'];
+    var vibIdx = 0;
+
+    {% for td in turbine_data %}
+    (function() {
+        var times = {{ td.vib_times_json|safe }};
+        var values = {{ td.vib_values_json|safe }};
+        if (times.length > 0) {
+            if (times.length > vibLabels.length) vibLabels = times;
+            vibDatasets.push({
+                label: '{{ td.turbine.turbine_id }}',
+                data: values,
+                borderColor: vibColors[vibIdx % vibColors.length],
+                backgroundColor: 'transparent',
+                borderWidth: 1.5,
+                tension: 0.4,
+                pointRadius: 0,
+                pointHoverRadius: 3,
+                pointHoverBackgroundColor: '#c9d1d9',
+                pointHoverBorderColor: '#0d1117',
+                pointHoverBorderWidth: 2
+            });
+            vibIdx++;
+        }
+    })();
+    {% endfor %}
+
+    if (vibLabels.length > 0) {
+        var vibCtx = document.getElementById('vibrationChart');
+        if (vibCtx) {
+            new Chart(vibCtx, {
+                type: 'line',
+                data: { labels: vibLabels, datasets: vibDatasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: {
+                            display: true, position: 'top', align: 'end',
+                            labels: { boxWidth: 12, boxHeight: 1, color: '#484f58', font: { size: 10, family: "'IBM Plex Mono', monospace" }, padding: 16 }
+                        },
+                        tooltip: {
+                            backgroundColor: '#151b25',
+                            borderColor: 'rgba(48, 62, 80, 0.6)',
+                            borderWidth: 1,
+                            titleFont: { family: "'IBM Plex Mono', monospace", size: 10, weight: '500' },
+                            bodyFont: { family: "'IBM Plex Mono', monospace", size: 10 },
+                            padding: 10,
+                            cornerRadius: 4,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + ' mm/s'; }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 9 }, color: '#484f58' } },
+                        y: {
+                            grid: { color: 'rgba(48, 62, 80, 0.15)', drawBorder: false },
+                            ticks: { callback: function(v) { return v + ' mm/s'; }, font: { size: 9 }, color: '#484f58', padding: 8 }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Temperature Chart — monochrome palette
+    var tempDatasets = [];
+    var tempLabels = [];
+    var tempColors = ['rgba(201, 209, 217, 0.7)', 'rgba(201, 209, 217, 0.45)', 'rgba(201, 209, 217, 0.3)', 'rgba(201, 209, 217, 0.2)'];
+    var tempIdx = 0;
+
+    {% for td in turbine_data %}
+    (function() {
+        var times = {{ td.temp_times_json|safe }};
+        var values = {{ td.temp_values_json|safe }};
+        if (times.length > 0) {
+            if (times.length > tempLabels.length) tempLabels = times;
+            tempDatasets.push({
+                label: '{{ td.turbine.turbine_id }}',
+                data: values,
+                borderColor: tempColors[tempIdx % tempColors.length],
+                backgroundColor: 'transparent',
+                borderWidth: 1.5,
+                tension: 0.4,
+                pointRadius: 0,
+                pointHoverRadius: 3,
+                pointHoverBackgroundColor: '#c9d1d9',
+                pointHoverBorderColor: '#0d1117',
+                pointHoverBorderWidth: 2
+            });
+            tempIdx++;
+        }
+    })();
+    {% endfor %}
+
+    if (tempLabels.length > 0) {
+        var tempCtx = document.getElementById('temperatureChart');
+        if (tempCtx) {
+            new Chart(tempCtx, {
+                type: 'line',
+                data: { labels: tempLabels, datasets: tempDatasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: {
+                            display: true, position: 'top', align: 'end',
+                            labels: { boxWidth: 12, boxHeight: 1, color: '#484f58', font: { size: 10, family: "'IBM Plex Mono', monospace" }, padding: 16 }
+                        },
+                        tooltip: {
+                            backgroundColor: '#151b25',
+                            borderColor: 'rgba(48, 62, 80, 0.6)',
+                            borderWidth: 1,
+                            titleFont: { family: "'IBM Plex Mono', monospace", size: 10, weight: '500' },
+                            bodyFont: { family: "'IBM Plex Mono', monospace", size: 10 },
+                            padding: 10,
+                            cornerRadius: 4,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + ' \u00B0C'; }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 9 }, color: '#484f58' } },
+                        y: {
+                            grid: { color: 'rgba(48, 62, 80, 0.15)', drawBorder: false },
+                            ticks: { callback: function(v) { return v + ' \u00B0C'; }, font: { size: 9 }, color: '#484f58', padding: 8 }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Heat Rate Chart — monochrome with subtle fill
+    var hrLabels = {{ hr_times_json|safe }};
+    var hrValues = {{ hr_values_json|safe }};
+
+    if (hrLabels.length > 0) {
+        var hrCtx = document.getElementById('heatRateChart');
+        if (hrCtx) {
+            var hrGradient = hrCtx.getContext('2d').createLinearGradient(0, 0, 0, 260);
+            hrGradient.addColorStop(0, 'rgba(201, 209, 217, 0.08)');
+            hrGradient.addColorStop(1, 'rgba(201, 209, 217, 0.01)');
+
+            new Chart(hrCtx, {
+                type: 'line',
+                data: {
+                    labels: hrLabels,
+                    datasets: [{
+                        label: 'Heat Rate (BTU/kWh)',
+                        data: hrValues,
+                        borderColor: 'rgba(201, 209, 217, 0.6)',
+                        backgroundColor: hrGradient,
+                        borderWidth: 1.5,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        pointHoverBackgroundColor: '#c9d1d9',
+                        pointHoverBorderColor: '#0d1117',
+                        pointHoverBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: {
+                            display: true, position: 'top', align: 'end',
+                            labels: { boxWidth: 12, boxHeight: 1, color: '#484f58', font: { size: 10, family: "'IBM Plex Mono', monospace" }, padding: 16 }
+                        },
+                        tooltip: {
+                            backgroundColor: '#151b25',
+                            borderColor: 'rgba(48, 62, 80, 0.6)',
+                            borderWidth: 1,
+                            titleFont: { family: "'IBM Plex Mono', monospace", size: 10, weight: '500' },
+                            bodyFont: { family: "'IBM Plex Mono', monospace", size: 10 },
+                            padding: 10,
+                            cornerRadius: 4,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(ctx) { return ctx.parsed.y.toFixed(0) + ' BTU/kWh'; }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 9 }, color: '#484f58' } },
+                        y: {
+                            grid: { color: 'rgba(48, 62, 80, 0.15)', drawBorder: false },
+                            ticks: { callback: function(v) { return v.toLocaleString(); }, font: { size: 9 }, color: '#484f58', padding: 8 }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // AJAX Polling
+    function refreshPlantData() {
+        fetch('{% url "dashboard:api-plant-data" plant.code|lower %}')
+            .then(function(resp) { return resp.json(); })
+            .then(function(data) {})
+            .catch(function() {});
+    }
+    setInterval(refreshPlantData, 30000);
+
+})();
+</script>
+{% endblock %}

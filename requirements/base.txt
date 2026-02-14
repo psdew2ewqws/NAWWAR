@@ -1,0 +1,15 @@
+# Core
+Django>=5.0,<7.0
+django-environ>=0.11.0
+Pillow>=10.0.0
+
+# API
+djangorestframework>=3.14.0
+
+# Database
+psycopg[binary]>=3.1.0
+dj-database-url>=2.1.0
+
+# Production
+gunicorn>=21.0.0
+whitenoise>=6.6.0

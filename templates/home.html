@@ -1,0 +1,616 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NAWWAR // CONTROL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#000;color:#00ff41;overflow:hidden}
+body{font-family:'Share Tech Mono','Courier New',monospace}
+
+canvas#bg{position:fixed;inset:0;z-index:0}
+
+/* ── PRESHOW: the void before the room ── */
+#preshow{position:fixed;inset:0;z-index:400;background:#000;
+display:flex;flex-direction:column;align-items:center;justify-content:center;
+pointer-events:none}
+#preshow .cursor-lone{font-family:'VT323',monospace;font-size:1.4rem;color:#00ff41;
+opacity:0;text-shadow:0 0 6px rgba(0,255,65,.4)}
+#preshow .signal-text{font-size:.7rem;color:#00ff41;letter-spacing:.5em;
+text-transform:uppercase;opacity:0;margin-top:1rem;
+text-shadow:0 0 12px rgba(0,255,65,.3)}
+#preshow .access-line{font-size:.5rem;color:#1a3a1a;letter-spacing:.3em;
+opacity:0;margin-top:.3rem}
+
+/* ── CRT OVERLAY ── */
+.crt{position:fixed;inset:0;z-index:200;pointer-events:none;
+background:repeating-linear-gradient(
+  0deg,
+  rgba(0,0,0,.06) 0px,
+  rgba(0,0,0,.06) 1px,
+  transparent 1px,
+  transparent 3px
+)}
+
+/* ── SCREEN GLITCH ── */
+#glitch-flash{position:fixed;inset:0;z-index:300;pointer-events:none;
+background:#00ff41;opacity:0;mix-blend-mode:overlay}
+
+/* ── ROOM: the grid of monitors ── */
+#room{position:relative;z-index:10;height:100vh;padding:.6rem;
+display:grid;gap:.5rem;
+grid-template-columns:1.6fr 1fr 1fr;
+grid-template-rows:1fr 1fr .7fr auto;
+opacity:0;
+}
+
+/* ── MONITOR BASE ── */
+.mon{background:rgba(4,8,4,.92);border:1px solid #0a1a0a;border-radius:2px;
+padding:.6rem .7rem;position:relative;overflow:hidden;opacity:0;
+box-shadow:inset 0 0 40px rgba(0,0,0,.6),0 0 8px rgba(0,255,65,.02)}
+.mon::after{content:'';position:absolute;inset:0;pointer-events:none;
+background:linear-gradient(180deg,rgba(0,255,65,.015) 0%,transparent 40%,transparent 60%,rgba(0,255,65,.01) 100%)}
+
+/* static flash on monitor power-on */
+.mon.static-flash::before{content:'';position:absolute;inset:0;z-index:5;
+background:repeating-linear-gradient(
+  0deg,
+  rgba(0,255,65,.08) 0px,
+  transparent 2px,
+  rgba(0,255,65,.03) 4px
+);
+animation:staticNoise .15s steps(3) 1;pointer-events:none}
+@keyframes staticNoise{
+  0%{opacity:1;transform:translateY(0)}
+  33%{opacity:.7;transform:translateY(-2px)}
+  66%{opacity:.9;transform:translateY(1px)}
+  100%{opacity:0;transform:translateY(0)}
+}
+
+/* ── MONITOR HEADER ── */
+.mh{display:flex;justify-content:space-between;align-items:center;
+padding-bottom:.35rem;margin-bottom:.35rem;border-bottom:1px solid #081208}
+.mh-id{font-size:.55rem;color:#1a3a1a;letter-spacing:.15em;text-transform:uppercase}
+.mh-ts{font-size:.5rem;color:#0a2a0a;font-family:'VT323',monospace}
+.mh-rec{color:#ff2020;font-size:.5rem;letter-spacing:.1em}
+.mh-rec::before{content:'●';margin-right:.3rem;animation:pulse-rec 1s steps(1) infinite}
+@keyframes pulse-rec{0%,49%{opacity:1}50%,100%{opacity:0}}
+
+/* ── MONITOR BODY ── */
+.mb{font-size:.62rem;line-height:1.75;white-space:pre-wrap;word-break:break-all;overflow:hidden}
+.g{color:#00ff41}.dg{color:#00aa2a}.dd{color:#0a5a0a}.bg{color:#062a06}
+.r{color:#ff2020}.y{color:#ffb000}.w{color:#c0c0c0}
+
+/* ── M1: MAIN IDENTITY ── */
+.mon.m1{grid-row:1/3;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+.m1-name{font-family:'VT323',monospace;font-size:clamp(4rem,11vw,7.5rem);
+color:#00ff41;line-height:.95;direction:rtl;
+text-shadow:0 0 30px rgba(0,255,65,.5),0 0 80px rgba(0,255,65,.15),0 0 2px rgba(0,255,65,.8)}
+.m1-sub{font-size:.55rem;color:#0a3a0a;letter-spacing:.35em;text-transform:uppercase;margin-top:.8rem}
+.m1-greek{font-size:.6rem;color:#0a4a0a;margin-top:1.2rem;font-style:italic;letter-spacing:.03em;line-height:1.8}
+.m1-greek2{font-size:.5rem;color:#063a06;margin-top:.15rem;letter-spacing:.02em}
+.m1-attr{font-size:.45rem;color:#082808;letter-spacing:.2em;margin-top:.2rem}
+.m1-power{font-size:1rem;color:#00ff41;margin-top:.8rem;
+letter-spacing:.25em;text-transform:uppercase;opacity:0;
+text-shadow:0 0 15px rgba(0,255,65,.3),0 0 40px rgba(0,255,65,.1)}
+
+/* ── M6: TERMINAL (full width) ── */
+.mon.m6{grid-column:1/-1}
+.m6-out{height:4.2em;overflow:hidden;position:relative}
+.m6-out::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1.5em;
+background:linear-gradient(transparent,rgba(4,8,4,.92));pointer-events:none}
+
+/* ── STATS GRID ── */
+.sg{display:grid;grid-template-columns:1fr auto;gap:.15rem .5rem}
+.sg-l{color:#0a4a0a;font-size:.55rem}.sg-v{font-size:.6rem;text-align:right}
+
+/* ── FOOTER ROW ── */
+.ftr{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:.1rem 0;opacity:0}
+#cta{display:flex;gap:.6rem}
+#cta a{color:#0a3a0a;text-decoration:none;font-size:.6rem;padding:.35rem .7rem;
+border:1px solid #0a1a0a;letter-spacing:.12em;transition:all .3s;opacity:0}
+#cta a:hover{color:#00ff41;border-color:#00ff41;text-shadow:0 0 8px rgba(0,255,65,.3);
+box-shadow:0 0 12px rgba(0,255,65,.08)}
+.ftr-clock{font-family:'VT323',monospace;font-size:.65rem;color:#0a3a0a;
+display:flex;align-items:center;gap:.4rem}
+.ftr-clock .dot{width:5px;height:5px;background:#ff2020;border-radius:50%;
+animation:pulse-rec 1s steps(1) infinite}
+
+/* ── MOBILE ── */
+@media(max-width:900px){
+  body{overflow-y:auto}
+  #room{height:auto;min-height:100vh;grid-template-columns:1fr;grid-template-rows:auto}
+  .mon.m1{grid-row:auto;min-height:220px}
+  .mon.m6{grid-column:auto}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ PRESHOW: THE VOID ═══ -->
+<div id="preshow">
+  <div class="cursor-lone">█</div>
+  <div class="signal-text">SIGNAL DETECTED</div>
+  <div class="access-line">INITIALIZING CONTROL INTERFACE...</div>
+</div>
+
+<div id="glitch-flash"></div>
+<canvas id="bg"></canvas>
+<div class="crt"></div>
+
+<div id="room">
+
+  <!-- ═══ M1: PRIMARY — IDENTITY ═══ -->
+  <div class="mon m1" id="m1">
+    <div class="mh"><span class="mh-id">feed 01 // primary</span><span class="mh-rec">REC</span></div>
+    <div class="m1-name">نوّر</div>
+    <div class="m1-sub">nawwar // energy intelligence system</div>
+    <div class="m1-greek">φύσις κρύπτεσθαι φιλεῖ</div>
+    <div class="m1-greek2">οὔτε λέγει οὔτε κρύπτει ἀλλὰ σημαίνει</div>
+    <div class="m1-attr">— ΗΡΑΚΛΕΙΤΟΣ</div>
+    <div class="m1-power">Power ?</div>
+  </div>
+
+  <!-- ═══ M2: RECON SCAN ═══ -->
+  <div class="mon" id="m2">
+    <div class="mh"><span class="mh-id">feed 02 // recon</span><span class="mh-ts" id="ts2"></span></div>
+    <div class="mb" id="mb2"></div>
+  </div>
+
+  <!-- ═══ M3: API EXPOSURE ═══ -->
+  <div class="mon" id="m3">
+    <div class="mh"><span class="mh-id">feed 03 // api map</span><span class="mh-ts" id="ts3"></span></div>
+    <div class="mb" id="mb3"></div>
+  </div>
+
+  <!-- ═══ M4: IDOR BREACH ═══ -->
+  <div class="mon" id="m4">
+    <div class="mh"><span class="mh-id">feed 04 // idor</span><span class="mh-ts" id="ts4"></span></div>
+    <div class="mb" id="mb4"></div>
+  </div>
+
+  <!-- ═══ M5: FINDINGS SUMMARY ═══ -->
+  <div class="mon" id="m5">
+    <div class="mh"><span class="mh-id">feed 05 // audit</span><span class="mh-ts" id="ts5"></span></div>
+    <div class="mb" id="mb5"></div>
+  </div>
+
+  <!-- ═══ M6: LIVE TERMINAL ═══ -->
+  <div class="mon m6" id="m6">
+    <div class="mh"><span class="mh-id">feed 06 // live</span><span class="mh-rec">LIVE</span></div>
+    <div class="mb m6-out" id="mb6"></div>
+  </div>
+
+  <!-- ═══ FOOTER ═══ -->
+  <div class="ftr" id="ftr">
+    <div id="cta">
+      <a href="/nawwar/operations/">[ OPERATIONS ]</a>
+      <a href="/nawwar/consumer/">[ CONSUMER ]</a>
+    </div>
+    <div class="ftr-clock"><span class="dot"></span><span id="clock">--:--:--</span></div>
+  </div>
+
+</div>
+
+<script src="{% static 'js/three.min.js' %}"></script>
+<script src="{% static 'js/gsap.min.js' %}"></script>
+<script>
+(function(){
+'use strict';
+
+/* ═══════════════════════════════════════
+   THREE.JS — CRT STATIC / RADAR FIELD
+   ═══════════════════════════════════════ */
+var canvas = document.getElementById('bg');
+var renderer = new THREE.WebGLRenderer({canvas:canvas,antialias:false});
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));
+
+var scene = new THREE.Scene();
+var cam = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+
+var U = {uTime:{value:0},uRes:{value:new THREE.Vector2(
+  window.innerWidth*renderer.getPixelRatio(),
+  window.innerHeight*renderer.getPixelRatio()
+)}};
+
+var frag = [
+'precision highp float;',
+'uniform float uTime;',
+'uniform vec2 uRes;',
+'',
+'float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}',
+'float hash2(vec2 p){return fract(sin(dot(p,vec2(269.5,183.3)))*43758.5453);}',
+'',
+'void main(){',
+'  vec2 uv=gl_FragCoord.xy/uRes;',
+'  float t=uTime;',
+'  vec3 col=vec3(0.0);',
+'',
+'  // digital noise — pixel static',
+'  float n=hash(floor(gl_FragCoord.xy*0.8)+floor(t*6.0)*137.0);',
+'  col+=vec3(0.0,n*0.012,n*0.003);',
+'',
+'  // secondary layer — larger blocks',
+'  float n2=hash2(floor(gl_FragCoord.xy*0.15)+floor(t*2.0)*73.0);',
+'  col+=vec3(0.0,n2*0.006,n2*0.001);',
+'',
+'  // interference band',
+'  float bandY=hash(vec2(floor(t*2.5),0.0));',
+'  float band=smoothstep(0.015,0.0,abs(uv.y-bandY));',
+'  float bandOn=step(0.8,hash(vec2(floor(t*2.5),7.7)));',
+'  col+=vec3(0.0,0.025,0.005)*band*bandOn;',
+'',
+'  // radar sweep',
+'  vec2 c=uv-0.5;',
+'  float ang=atan(c.y,c.x);',
+'  float sweepAng=mod(t*0.4,6.2832)-3.14159;',
+'  float diff=ang-sweepAng;',
+'  diff=mod(diff+3.14159,6.2832)-3.14159;',
+'  float sweep=smoothstep(0.5,0.0,diff)*smoothstep(-0.02,0.0,diff);',
+'  float dist=length(c);',
+'  sweep*=smoothstep(0.5,0.1,dist)*0.02;',
+'  col+=vec3(0.0,sweep,sweep*0.2);',
+'',
+'  // grid circles',
+'  float ring1=abs(dist-0.12);',
+'  float ring2=abs(dist-0.25);',
+'  float ring3=abs(dist-0.38);',
+'  float rings=smoothstep(0.002,0.0,ring1)+smoothstep(0.002,0.0,ring2)+smoothstep(0.002,0.0,ring3);',
+'  col+=vec3(0.0,rings*0.008,0.0);',
+'',
+'  // grid cross',
+'  float cross=smoothstep(0.001,0.0,abs(c.x))+smoothstep(0.001,0.0,abs(c.y));',
+'  col+=vec3(0.0,cross*0.005,0.0)*smoothstep(0.5,0.0,dist);',
+'',
+'  // server pings (3 fixed positions)',
+'  vec2 s1=vec2(-0.12,0.08);',
+'  vec2 s2=vec2(0.15,-0.05);',
+'  vec2 s3=vec2(0.05,0.18);',
+'  float p1=smoothstep(0.012,0.0,length(c-s1));',
+'  float p2=smoothstep(0.012,0.0,length(c-s2));',
+'  float p3=smoothstep(0.012,0.0,length(c-s3));',
+'  float pings=(p1+p2+p3)*(0.6+0.4*sin(t*3.0));',
+'  col+=vec3(0.0,pings*0.08,0.0);',
+'',
+'  // ping ripples after sweep passes',
+'  float ripple1=sin(length(c-s1)*200.0-t*4.0)*smoothstep(0.08,0.01,length(c-s1));',
+'  float ripple2=sin(length(c-s2)*200.0-t*4.0)*smoothstep(0.08,0.01,length(c-s2));',
+'  float ripple3=sin(length(c-s3)*200.0-t*4.0)*smoothstep(0.08,0.01,length(c-s3));',
+'  float ripples=(max(ripple1,0.0)+max(ripple2,0.0)+max(ripple3,0.0))*0.006;',
+'  col+=vec3(0.0,ripples,0.0);',
+'',
+'  // vignette',
+'  col*=1.0-dist*0.6;',
+'',
+'  gl_FragColor=vec4(col,1.0);',
+'}'
+].join('\n');
+
+var vert='void main(){gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}';
+var mat=new THREE.ShaderMaterial({uniforms:U,vertexShader:vert,fragmentShader:frag});
+scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),mat));
+
+window.addEventListener('resize',function(){
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  U.uRes.value.set(window.innerWidth*renderer.getPixelRatio(),window.innerHeight*renderer.getPixelRatio());
+});
+
+var clock=new THREE.Clock();
+function render(){
+  U.uTime.value+=Math.min(clock.getDelta(),0.05);
+  renderer.render(scene,cam);
+  requestAnimationFrame(render);
+}
+render();
+
+/* ═══════════════════════════════════════
+   CLOCK
+   ═══════════════════════════════════════ */
+function updateClock(){
+  var d=new Date();
+  var h=String(d.getHours()).padStart(2,'0');
+  var m=String(d.getMinutes()).padStart(2,'0');
+  var s=String(d.getSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent=h+':'+m+':'+s;
+}
+setInterval(updateClock,1000);
+updateClock();
+
+function tsNow(){
+  var d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+
+    String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+
+    String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');
+}
+
+/* ═══════════════════════════════════════
+   TYPEWRITER ENGINE
+   ═══════════════════════════════════════ */
+function typeLines(el,lines,cb){
+  var li=0,ci=0,buf='';
+  function tick(){
+    if(li>=lines.length){if(cb)cb();return;}
+    if(ci<lines[li].length){
+      ci++;
+      el.innerHTML=buf+lines[li].substring(0,ci)+'<span class="g">█</span>';
+      setTimeout(tick,8+Math.random()*18);
+    } else {
+      buf+=lines[li]+'\n';
+      li++;ci=0;
+      el.innerHTML=buf+'<span class="g">█</span>';
+      setTimeout(tick,80+Math.random()*200);
+    }
+  }
+  tick();
+}
+
+/* ═══════════════════════════════════════
+   MONITOR CONTENT
+   ═══════════════════════════════════════ */
+var m2lines=[
+  '<span class="dg">$</span> <span class="g">nmap -sV 85.159.218.151</span>',
+  '',
+  '<span class="dd">PORT      STATE  SERVICE</span>',
+  '<span class="g">443/tcp   open   HTTPS</span>',
+  '<span class="y">8080/tcp  open   HTTP (NO TLS)</span>',
+  '<span class="g">9443/tcp  open   WSS</span>',
+  '',
+  '<span class="dd">SERVER:</span> <span class="dg">Apache-Coyote/1.1</span>',
+  '<span class="dd">BACKEND:</span> <span class="dg">Tomcat/9.0.41</span>',
+  '<span class="r">WARNING: 8080 — unencrypted traffic</span>',
+];
+
+var m3lines=[
+  '<span class="dg">$</span> <span class="g">curl /swagger/v1/swagger.json</span>',
+  '',
+  '<span class="dd">STATUS:</span> <span class="r">200 OK — PUBLIC ACCESS</span>',
+  '<span class="dd">ENDPOINTS:</span> <span class="y">97 mapped</span>',
+  '<span class="dd">SCHEMAS:</span> <span class="y">95 exposed</span>',
+  '<span class="dd">AUTH REQUIRED:</span> <span class="r">NONE</span>',
+  '',
+  '<span class="bg">// complete API surface visible</span>',
+  '<span class="bg">// no authentication gate</span>',
+  '<span class="bg">// internal naming conventions leaked</span>',
+];
+
+var m4lines=[
+  '<span class="dg">$</span> <span class="g">POST /CheckFileNumberinSAP</span>',
+  '<span class="dd">  Cookie: UserToken=&lt;any_valid_jwt&gt;</span>',
+  '<span class="dd">  Body: {"FileNumber":"015070******"}</span>',
+  '',
+  '<span class="r">→ 200 OK</span>',
+  '<span class="y">  FisrtName: "██████████"</span>',
+  '<span class="y">  meterNumber: "████████"</span>',
+  '<span class="y">  receivableAmount: "███"</span>',
+  '<span class="y">  subsidy_Flag: "█"</span>',
+  '',
+  '<span class="r">  ANY subscriber. ZERO authorization.</span>',
+];
+
+var m5content=[
+  ['SERVERS DISCOVERED','<span class="g">3</span>'],
+  ['ENDPOINTS MAPPED','<span class="y">97</span>'],
+  ['SECURITY FINDINGS','<span class="r">16</span>'],
+  ['CRITICAL SEVERITY','<span class="r">5</span>'],
+  ['HIGH SEVERITY','<span class="y">5</span>'],
+  ['AUTHENTICATION WALLS','<span class="r">0</span>'],
+  ['RATE LIMITING','<span class="r">NONE</span>'],
+  ['DATA ACCESSIBLE','<span class="r">ALL SUBSCRIBERS</span>'],
+  ['SMART METER AUTH','<span class="r">NONE</span>'],
+  ['PII EXPOSURE','<span class="r">FULL</span>'],
+];
+
+/* ═══════════════════════════════════════
+   LIVE TERMINAL (M6) — loops
+   ═══════════════════════════════════════ */
+var termFeed=[
+  '$ POST /Dashboard/SmartMeterDashboard',
+  '  200 OK — NO AUTHENTICATION',
+  '$ POST /CheckFileNumberinSAP',
+  '  {"FisrtName":"███████","meterNumber":"██████"}',
+  '  any subscriber. zero authorization.',
+  '$ GET /swagger/v1/swagger.json',
+  '  79 endpoints. 95 schemas. public.',
+  '$ nmap -sV 85.159.218.151',
+  '  :443  :8080/HTTP  NO_TLS  Tomcat/9.0.41',
+  '$ seq 0150706667387 0150706667400',
+  '  sequential. enumerable. every subscriber.',
+  '$ strings response.headers',
+  '  C:\\Users\\Maiada-Ibrahim\\source\\repos\\',
+  '  AIzaSyA7f_t2...  +962790121435  NZsrvOmH',
+  '$ echo "$FINDINGS"',
+  '  16 findings  5 critical  0 auth walls',
+  '$ POST /AllMeterOwnerRelatives',
+  '  subsidy_Flag  receivableAmount  contractAccount',
+  '$ grep "DashBord|FisrtName|GetStetus"',
+  '  ProvenenceID  GetRejectionReson  GetSubCloseStautus',
+  '$ _',
+];
+var termStarted=false;
+function initTerm(){
+  if(termStarted)return;termStarted=true;
+  var el=document.getElementById('mb6');
+  var li=0,ci=0,buf='';
+  function tick(){
+    if(ci<termFeed[li].length){ci++;}
+    else{
+      buf+=termFeed[li]+'\n';li++;ci=0;
+      if(li>=termFeed.length){setTimeout(function(){li=0;ci=0;buf='';el.textContent='';tick();},3000);return;}
+      var lines=buf.split('\n');
+      if(lines.length>4)buf=lines.slice(-4).join('\n');
+      el.textContent=buf+termFeed[li].substring(0,ci);
+      setTimeout(tick,60+Math.random()*300);return;
+    }
+    el.textContent=buf+termFeed[li].substring(0,ci);
+    setTimeout(tick,12+Math.random()*25);
+  }
+  tick();
+}
+
+/* ═══════════════════════════════════════
+   M5: STATS BUILD — staggered reveal
+   ═══════════════════════════════════════ */
+function buildStats(){
+  var el=document.getElementById('mb5');
+  var html='<div class="sg">';
+  m5content.forEach(function(row,i){
+    html+='<span class="sg-l" style="opacity:0" id="stat-l-'+i+'">'+row[0]+'</span>';
+    html+='<span class="sg-v" style="opacity:0" id="stat-v-'+i+'">'+row[1]+'</span>';
+  });
+  html+='</div>';
+  el.innerHTML=html;
+  /* stagger each stat row in */
+  m5content.forEach(function(_,i){
+    gsap.to('#stat-l-'+i+',#stat-v-'+i,{opacity:1,duration:0.15,delay:i*0.12});
+  });
+}
+
+/* ═══════════════════════════════════════
+   SCREEN GLITCH EFFECT
+   ═══════════════════════════════════════ */
+function screenGlitch(intensity,dur){
+  var flash=document.getElementById('glitch-flash');
+  gsap.killTweensOf(flash);
+  gsap.set(flash,{opacity:intensity||0.08});
+  gsap.to(flash,{opacity:0,duration:dur||0.2,ease:'power2.out'});
+}
+
+/* ═══════════════════════════════════════
+   MONITOR POWER-ON with static flash
+   ═══════════════════════════════════════ */
+function powerOn(sel,tl,pos,cb){
+  tl.call(function(){
+    var mon=document.querySelector(sel);
+    mon.classList.add('static-flash');
+    setTimeout(function(){mon.classList.remove('static-flash');},180);
+    screenGlitch(0.04,0.15);
+  },null,pos);
+  tl.set(sel,{opacity:0},pos);
+  tl.to(sel,{opacity:1,duration:0.08,ease:'none'},pos);
+  tl.to(sel,{opacity:0.2,duration:0.05,ease:'none'},pos+0.08);
+  tl.to(sel,{opacity:0.7,duration:0.04,ease:'none'},pos+0.13);
+  tl.to(sel,{opacity:1,duration:0.2,ease:'power1.out',onComplete:function(){
+    var mon=document.querySelector(sel);
+    var ts=mon.querySelector('.mh-ts');
+    if(ts)ts.textContent=tsNow();
+    if(cb)cb();
+  }},pos+0.17);
+}
+
+/* ═══════════════════════════════════════
+   THE STORY — cinematic sequence
+   ═══════════════════════════════════════ */
+var tl;
+var storyDone=false;
+
+function playStory(){
+  tl=gsap.timeline();
+
+  var pre=document.getElementById('preshow');
+  var cursorEl=pre.querySelector('.cursor-lone');
+  var signalEl=pre.querySelector('.signal-text');
+  var accessEl=pre.querySelector('.access-line');
+  var room=document.getElementById('room');
+
+  /* ── ACT 1: THE VOID — cursor blinks ── */
+  tl.to(cursorEl,{opacity:1,duration:0.01},0.3);
+  tl.to(cursorEl,{opacity:0,duration:0.01,repeat:3,yoyo:true,repeatDelay:0.3},0.4);
+
+  /* ── ACT 2: SIGNAL DETECTED ── */
+  tl.to(signalEl,{opacity:1,duration:0.01},1.6);
+  tl.call(function(){screenGlitch(0.06,0.2);},null,1.6);
+  tl.to(accessEl,{opacity:1,duration:0.3},2.0);
+
+  /* ── ACT 3: PRESHOW DISSOLVES, ROOM APPEARS ── */
+  tl.to(room,{opacity:1,duration:0.01},2.8);
+  tl.to(pre,{opacity:0,duration:0.5,ease:'power2.in'},2.8);
+  tl.set(pre,{display:'none'},3.3);
+  tl.call(function(){screenGlitch(0.1,0.2);},null,2.8);
+
+  /* ── ACT 4: M1 — نوّر ── */
+  powerOn('#m1',tl,3.2,function(){
+    gsap.to('.m1-power',{opacity:1,duration:0.4,delay:0.2,ease:'power1.out'});
+  });
+
+  /* ── ACT 5: M2 — recon ── */
+  powerOn('#m2',tl,4.3,function(){
+    typeLines(document.getElementById('mb2'),m2lines);
+  });
+
+  /* ── ACT 6: M3 — API map ── */
+  powerOn('#m3',tl,5.3,function(){
+    typeLines(document.getElementById('mb3'),m3lines);
+  });
+
+  /* ── ACT 7: M4 — THE BREACH ── */
+  tl.call(function(){screenGlitch(0.15,0.25);},null,6.3);
+  powerOn('#m4',tl,6.4,function(){
+    typeLines(document.getElementById('mb4'),m4lines);
+  });
+
+  /* ── ACT 8: M5 — audit stats ── */
+  powerOn('#m5',tl,7.4,function(){
+    buildStats();
+  });
+
+  /* ── ACT 9: M6 — live feed ── */
+  powerOn('#m6',tl,8.4,function(){
+    initTerm();
+  });
+
+  /* ── ACT 10: FOOTER ── */
+  tl.to('#ftr',{opacity:1,duration:0.3},9.2);
+  tl.to('#cta a',{opacity:1,stagger:0.2,duration:0.4,ease:'power1.out',onComplete:function(){
+    storyDone=true;
+  }},9.4);
+}
+
+/* start the story on load */
+playStory();
+
+/* skip — click anywhere to jump to end */
+document.addEventListener('click',function(e){
+  if(e.target.closest('a'))return;
+  if(!storyDone&&tl){
+    storyDone=true;
+    tl.progress(1);
+    /* ensure preshow is gone */
+    var pre=document.getElementById('preshow');
+    pre.style.display='none';
+    document.getElementById('room').style.opacity='1';
+    /* fire everything that relies on callbacks */
+    gsap.set('.m1-power',{opacity:1});
+    gsap.set('#ftr',{opacity:1});
+    if(!termStarted)initTerm();
+    /* type remaining monitors instantly */
+    ['mb2','mb3','mb4'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(!el.innerHTML.trim()){
+        var lines=id==='mb2'?m2lines:id==='mb3'?m3lines:m4lines;
+        el.innerHTML=lines.join('\n');
+      }
+    });
+    if(!document.getElementById('mb5').innerHTML.trim())buildStats();
+  }
+});
+
+/* ═══════════════════════════════════════
+   PAGE TITLE FLICKER
+   ═══════════════════════════════════════ */
+var titles=['NAWWAR // CONTROL','نوّر // SYSTEM','NAWWAR // LIVE','نوّر'];
+var ti=0;
+setInterval(function(){
+  ti=(ti+1)%titles.length;
+  document.title=titles[ti];
+},4000);
+
+})();
+</script>
+</body>
+</html>
