@@ -792,40 +792,38 @@
         if (lastFileNumber) payload.file_number = lastFileNumber;
         if (ttsEnabled) payload.tts = true;
 
-        /* Detect file number → pre-fetch data from user's browser */
+        /* Detect file number → pre-fetch sidebar data in parallel */
         var fileMatch = text.match(FILE_NUM_RE);
-        var providerPromise = Promise.resolve(null);
 
         if (fileMatch) {
             var fn = fileMatch[1];
             payload.file_number = fn;
             lastFileNumber = fn;
             lastSendFetchedFile = fn;
-            /* Fetch smart meter data from browser */
-            providerPromise = jepcoFetchSmartMeter(fn).then(function(sm) {
-                return {smart_meter: sm};
-            });
+            /* Fire sidebar pre-fetch in parallel — don't block chat */
+            jepcoFetchSmartMeter(fn).then(function(sm) {
+                if (sm) {
+                    renderSmartMeterData(fn, sm, null);
+                    var smb = document.getElementById('sm-body');
+                    if (smb) smb.dataset.fileNumber = fn;
+                }
+            }).catch(function() {});
         }
 
-        providerPromise.then(function(providerData) {
-            /* If we got provider data from browser, attach it to the payload */
-            var sidebarRendered = false;
-            if (providerData && providerData.smart_meter) {
-                payload.jepco_data = providerData;
-                /* Also update the sidebar smart meter widget */
-                renderSmartMeterData(fileMatch[1], providerData.smart_meter, null);
-                var smb = document.getElementById('sm-body');
-                if (smb) smb.dataset.fileNumber = fileMatch[1];
-                sidebarRendered = true;
-            }
+        /* Chat API call — fires immediately, never waits for JEPCO pre-fetch */
+        var chatAbort = new AbortController();
+        var chatTimeout = setTimeout(function() { chatAbort.abort(); }, 30000);
 
-            return fetch('/nawwar/api/chat/', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            });
+        fetch('/nawwar/api/chat/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload),
+            signal: chatAbort.signal
         })
-        .then(function(r) { return r.json(); })
+        .then(function(r) {
+            clearTimeout(chatTimeout);
+            return r.json();
+        })
         .then(function(data) {
             hideTyping();
             if (data.error && !data.reply) {
@@ -853,16 +851,17 @@
             /* When chat returns a file_number, remember it and load sidebar */
             if (data.file_number) {
                 lastFileNumber = data.file_number;
-                /* Only load sidebar if it wasn't already rendered by the pre-fetch */
-                if (!sidebarRendered) {
-                    loadSmartMeter(data.file_number);
-                }
+                loadSmartMeter(data.file_number);
             }
             lastSendFetchedFile = null;
         })
-        .catch(function() {
+        .catch(function(err) {
+            clearTimeout(chatTimeout);
             hideTyping();
-            addMsg('system', '<span style="color:var(--critical)">عذراً، تعذر الاتصال بالخادم. تحقق من اتصالك وحاول مرة أخرى.</span>');
+            var msg = err && err.name === 'AbortError'
+                ? 'انتهت مهلة الاتصال. حاول مرة أخرى.'
+                : 'عذراً، تعذر الاتصال بالخادم. تحقق من اتصالك وحاول مرة أخرى.';
+            addMsg('system', '<span style="color:var(--critical)">' + msg + '</span>');
         });
     }
 
