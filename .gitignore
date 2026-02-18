@@ -85,12 +85,21 @@ comparison_example.py
 # Credentials & sensitive docs
 DATABASE_CREDENTIALS.md
 
+# JEPCO Security Research — CONFIDENTIAL
+JEPCO_SECURITY_ASSESSMENT_REPORT.md
+JEPCO_FULL_INTELLIGENCE_REPORT.md
+JEPCO_API_MAP.md
+CEGCO_INTELLIGENCE_REPORT.md
+
+# JEPCO proxy server — protected 
+jepco_proxy/
+
 # Internal task/recon notes
 tasks/
 api_recon/
 project_tracker.json
 
-# Old migration guides (not part of app)
+# Old migration guides
 DECOUPLE_MIGRATION.md
 DECOUPLE_QUICK_REFERENCE.md
 ENVIRONMENT_VARIABLES_GUIDE.md

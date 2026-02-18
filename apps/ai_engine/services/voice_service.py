@@ -50,11 +50,9 @@ class VoiceService:
 
     async def synthesize(self, *, text: str, voice: str = None) -> bytes:
         """
-        Synthesize Arabic text to speech audio using edge-tts.
+        Synthesize Arabic text to speech audio.
 
-        Args:
-            text: Arabic text to convert to speech.
-            voice: Edge-TTS voice name. Defaults to settings.TTS_CONFIG['DEFAULT_VOICE'].
+        Tries edge-tts first (free), falls back to OpenAI TTS.
 
         Returns:
             Audio bytes in MP3 format.
@@ -65,6 +63,7 @@ class VoiceService:
         logger.info("VoiceService.synthesize: %d chars, voice=%s", len(text), voice)
         start = time.monotonic()
 
+        # Try edge-tts first (free)
         try:
             communicate = edge_tts.Communicate(text, voice)
             audio_data = b""
@@ -72,25 +71,47 @@ class VoiceService:
                 if chunk["type"] == "audio":
                     audio_data += chunk["data"]
 
-            latency = int((time.monotonic() - start) * 1000)
+            if audio_data:
+                latency = int((time.monotonic() - start) * 1000)
+                await AILog.objects.acreate(
+                    model_name=f'edge-tts:{voice}',
+                    provider=AILog.Provider.LOCAL,
+                    latency_ms=latency,
+                    task_type=AILog.TaskType.TTS,
+                    success=True,
+                )
+                logger.info("VoiceService.synthesize (edge-tts): %d bytes, %dms", len(audio_data), latency)
+                return audio_data
+        except Exception as e:
+            logger.warning("edge-tts failed, falling back to OpenAI TTS: %s", e)
 
+        # Fallback: OpenAI TTS
+        try:
+            response = await self.openai.client.audio.speech.create(
+                model='tts-1',
+                voice='onyx',
+                input=text[:4096],
+                response_format='mp3',
+            )
+            audio_data = response.content
+
+            latency = int((time.monotonic() - start) * 1000)
             await AILog.objects.acreate(
-                model_name=f'edge-tts:{voice}',
-                provider=AILog.Provider.LOCAL,
+                model_name='tts-1:onyx',
+                provider=AILog.Provider.OPENAI,
                 latency_ms=latency,
                 task_type=AILog.TaskType.TTS,
                 success=True,
             )
-
-            logger.info("VoiceService.synthesize complete: %d bytes, %dms", len(audio_data), latency)
+            logger.info("VoiceService.synthesize (openai): %d bytes, %dms", len(audio_data), latency)
             return audio_data
 
         except Exception as e:
             latency = int((time.monotonic() - start) * 1000)
-            logger.error("VoiceService.synthesize failed: %s", e)
+            logger.error("VoiceService.synthesize failed (both providers): %s", e)
             await AILog.objects.acreate(
-                model_name=f'edge-tts:{voice}',
-                provider=AILog.Provider.LOCAL,
+                model_name='tts-1:onyx',
+                provider=AILog.Provider.OPENAI,
                 latency_ms=latency,
                 task_type=AILog.TaskType.TTS,
                 success=False,
@@ -128,8 +149,12 @@ class VoiceService:
             context_type=context_type,
         )
 
-        # Step 4: Synthesize response to audio
-        response_audio = await self.synthesize(text=response_text)
+        # Step 4: Synthesize response to audio (non-fatal if it fails)
+        response_audio = None
+        try:
+            response_audio = await self.synthesize(text=response_text)
+        except Exception as e:
+            logger.warning("TTS synthesis failed (non-fatal): %s", e)
 
         elapsed = int((time.monotonic() - start) * 1000)
         logger.info(

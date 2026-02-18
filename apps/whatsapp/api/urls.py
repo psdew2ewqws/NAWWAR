@@ -7,4 +7,5 @@ from apps.whatsapp.api import views
 
 urlpatterns = [
     path('', views.WhatsAppWebhookView.as_view(), name='whatsapp-webhook'),
+    path('debug/', views.webhook_debug, name='whatsapp-webhook-debug'),
 ]

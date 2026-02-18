@@ -48,6 +48,20 @@ MODEL_COST_PER_1K = {
 BUDGET_EXCEEDED_AR = "الخدمة مشغولة حالياً، يرجى المحاولة لاحقاً."
 DAILY_COST_CACHE_KEY = 'ai_daily_cost_usd'
 
+# Typical appliance monthly kWh for Jordanian households
+APPLIANCE_KWH = {
+    'مكيف': {'name_ar': 'مكيف', 'name_en': 'AC', 'kwh_per_month': 180, 'note': '12hrs/day summer'},
+    'ثلاجة': {'name_ar': 'ثلاجة', 'name_en': 'Refrigerator', 'kwh_per_month': 45, 'note': '24/7'},
+    'غسالة': {'name_ar': 'غسالة', 'name_en': 'Washing Machine', 'kwh_per_month': 20, 'note': '5 loads/week'},
+    'سخان': {'name_ar': 'سخان ماء', 'name_en': 'Water Heater', 'kwh_per_month': 120, 'note': '2hrs/day'},
+    'تلفزيون': {'name_ar': 'تلفزيون', 'name_en': 'TV', 'kwh_per_month': 15, 'note': '6hrs/day'},
+    'إضاءة': {'name_ar': 'إضاءة', 'name_en': 'Lighting', 'kwh_per_month': 30, 'note': '10 LEDs 6hrs/day'},
+    'كمبيوتر': {'name_ar': 'كمبيوتر/لابتوب', 'name_en': 'PC/Laptop', 'kwh_per_month': 25, 'note': '8hrs/day'},
+    'مجفف': {'name_ar': 'مجفف ملابس', 'name_en': 'Dryer', 'kwh_per_month': 60, 'note': '5 loads/week'},
+    'فرن': {'name_ar': 'فرن كهربائي', 'name_en': 'Electric Oven', 'kwh_per_month': 40, 'note': '1hr/day'},
+    'مكواة': {'name_ar': 'مكواة', 'name_en': 'Iron', 'kwh_per_month': 15, 'note': '3hrs/week'},
+}
+
 
 def check_ai_budget() -> bool:
     """Return True if daily AI budget is still available."""
@@ -80,6 +94,8 @@ class LLMService:
         content,
         session_id: str = None,
         file_number: str = None,
+        jepco_data: dict = None,
+        session_context: dict | None = None,
     ) -> dict:
         """
         Route a request to the appropriate AI service.
@@ -89,6 +105,10 @@ class LLMService:
             content: Text string, image bytes, or audio bytes.
             session_id: Optional conversation session ID for context.
             file_number: Optional file number from previous conversation turn.
+            jepco_data: Optional dict with client-fetched JEPCO data
+                        (keys: 'smart_meter', 'bills', 'sap').
+            session_context: Optional dict with conversation state
+                             (e.g. awaiting, appliances, expected_kwh).
 
         Returns:
             Dict with:
@@ -112,7 +132,10 @@ class LLMService:
         elif message_type == 'audio':
             result = await self._handle_audio(content)
         else:
-            result = await self._handle_text(content, file_number=file_number)
+            result = await self._handle_text(
+                content, file_number=file_number, jepco_data=jepco_data,
+                session_context=session_context,
+            )
 
         elapsed = int((time.monotonic() - start) * 1000)
         result['metadata']['processing_ms'] = elapsed
@@ -124,7 +147,10 @@ class LLMService:
 
         return result
 
-    async def _handle_text(self, text: str, *, file_number: str = None) -> dict:
+    async def _handle_text(
+        self, text: str, *, file_number: str = None, jepco_data: dict = None,
+        session_context: dict | None = None,
+    ) -> dict:
         """Route text to JEPCO live analysis, CrewAI, or RAG."""
         # Prompt injection pre-screening
         injection_match = check_prompt_injection(text)
@@ -138,6 +164,10 @@ class LLMService:
                 'response_type': 'text',
                 'metadata': {'intent': 'blocked', 'reason': 'injection_detected'},
             }
+
+        # Check if we're in an appliance conversation flow
+        if file_number and session_context and session_context.get('awaiting') == 'appliance_list':
+            return await self._analyze_appliances(text, file_number, session_context)
 
         intent = await self.rag.classify_intent(text=text)
 
@@ -153,6 +183,7 @@ class LLMService:
         if effective_file and (intent in ('billing', 'savings', 'general') or is_bare_number):
             jepco_result = await self._analyze_jepco(
                 text=text, file_number=effective_file, intent=intent,
+                jepco_data=jepco_data,
             )
             if jepco_result:
                 return jepco_result
@@ -191,6 +222,14 @@ class LLMService:
         context_type = 'operations' if intent == 'operations' else 'consumer'
         answer = await self.rag.answer(query=text, context_type=context_type)
 
+        # For tariff/billing-related intents, append offer to look up their bill
+        if intent in ('tariff', 'billing', 'savings', 'general') and not effective_file:
+            answer += (
+                "\n\n"
+                "لتحليل فاتورتك الفعلية ومعرفة استهلاكك الحقيقي وشريحتك، "
+                "أرسل لي رقم الملف (13 خانة يبدأ بـ 015) وراح أعطيك تحليل مفصّل."
+            )
+
         return {
             'response_text': answer,
             'response_type': 'text',
@@ -207,22 +246,14 @@ class LLMService:
             reply = await self.openai.chat(
                 messages=[{'role': 'user', 'content': user_text}],
                 system_prompt=(
-                    "أنت نوّار، مساعد كهرباء ذكي. المستخدم يسأل عن فاتورته لكنه لم يعطِ رقم الملف بعد.\n\n"
+                    "أنت نوّار، مساعد كهرباء ذكي. المستخدم يسأل عن فاتورته لكنه لم يعطِ رقم الملف.\n"
                     "القواعد:\n"
-                    "- أجب على ما يقوله المستخدم بشكل طبيعي ومتعاطف أولاً\n"
-                    "- إذا ذكر صورة/مسح/scan/image/photo: أخبره أنه يمكنه استخدام زر 'مسح فاتورة' (SCAN) "
-                    "في أسفل المحادثة لتصوير الفاتورة واستخراج البيانات تلقائياً\n"
-                    "- إذا كان قلقاً أو خائفاً: طمئنه أولاً ثم ساعده\n"
-                    "- في كل الحالات، اعرض مثال واضح لرقم الملف بهذا الشكل:\n"
-                    "  رقم الملف يتكون من 13 خانة ويبدأ بـ 015، مثال: 015XXXXXXXXXX\n"
-                    "- أخبره أين يجد رقم الملف: مكتوب في أعلى يمين فاتورة الكهرباء بجانب كلمة 'رقم الملف'\n"
-                    "- أخبره كيف يرسله: يكتب الرقم مباشرة في المحادثة، أو يستخدم زر 'مسح فاتورة' (SCAN) "
-                    "لتصوير الفاتورة واستخراج الرقم تلقائياً\n"
-                    "- لا تكرر نفس الرد — كن طبيعياً ومحادثاتياً\n"
-                    "- أجب بـ3-5 جمل فقط، لا تطوّل\n"
-                    "- أجب دائماً بالعربية حتى لو كتب المستخدم بالإنجليزية"
+                    "- أجب بتعاطف ثم اطلب رقم الملف (13 خانة يبدأ بـ 015)\n"
+                    "- إذا ذكر صورة/مسح: أخبره عن زر 'مسح فاتورة' (SCAN)\n"
+                    "- أخبره: الرقم في أعلى يمين الفاتورة\n"
+                    "- 3 جمل فقط. بدون Markdown أو إيموجي. عربي فقط."
                 ),
-                max_tokens=300,
+                max_tokens=200,
                 model=FAST_GPT,
             )
             return reply
@@ -245,17 +276,11 @@ class LLMService:
                     'content': f'أدخلت رقم الملف {file_number} لكنه غير صحيح أو لا يوجد له عداد ذكي',
                 }],
                 system_prompt=(
-                    "أنت نوّار، مساعد كهرباء ذكي. المستخدم أدخل رقم ملف لكنه غير صحيح "
-                    "أو لا تتوفر بيانات عداد ذكي لهذا الرقم.\n\n"
-                    "القواعد:\n"
-                    "- أخبره بلطف أن الرقم الذي أدخله غير صحيح أو لا تتوفر له بيانات\n"
-                    "- اطلب منه التأكد من رقم الملف (015XXXXXXXXXX — 13 خانة)\n"
-                    "- أخبره أن الرقم موجود في أعلى فاتورة الكهرباء\n"
-                    "- أو يمكنه مسح صورة الفاتورة باستخدام زر 'مسح فاتورة'\n"
-                    "- أجب بـ3-4 جمل فقط\n"
-                    "- أجب دائماً بالعربية"
+                    "أنت نوّار، مساعد كهرباء. المستخدم أدخل رقم ملف غير صحيح أو بدون عداد ذكي.\n"
+                    "أخبره بلطف، اطلب التأكد من الرقم (015XXXXXXXXXX — 13 خانة)، أو مسح صورة الفاتورة.\n"
+                    "3 جمل فقط. بدون Markdown أو إيموجي. عربي فقط."
                 ),
-                max_tokens=250,
+                max_tokens=150,
                 model=FAST_GPT,
             )
             return reply
@@ -268,40 +293,32 @@ class LLMService:
 
     async def _analyze_jepco(
         self, *, text: str, file_number: str, intent: str,
+        jepco_data: dict = None,
     ) -> dict | None:
         """
         Multi-model JEPCO analysis pipeline:
 
-        1. Fetch live smart meter data (unauthenticated, ~500ms)
-        2. Fetch bill history if available (~500ms, concurrent)
-        3. Build structured data template (instant)
-        4. GPT-4o: Deep reasoning — appliance pattern analysis, peak day
+        1. Use client-provided JEPCO data if available (browser fetched it
+           directly — bypasses geo-blocking), OR fetch server-side as fallback
+        2. Build structured data template (instant)
+        3. GPT-4o: Deep reasoning — appliance pattern analysis, peak day
            investigation, daily usage profiling (reasoning engine)
-        5. Claude Sonnet: Bill & tariff analysis, numerical precision
-        6. Combine into comprehensive response with appliance questions
+        4. Claude Sonnet: Bill & tariff analysis, numerical precision
+        5. Combine into comprehensive response with appliance questions
         """
-        from apps.consumer.clients.jepco_client import (
-            fetch_smart_meter_public, fetch_bills_public, fetch_sap_lookup,
-        )
+        from apps.consumer.clients.jepco_client import fetch_smart_meter
 
         try:
-            # Fetch smart meter + bill history + SAP subscriber info concurrently
-            smart_task = fetch_smart_meter_public(file_number)
-            bills_task = fetch_bills_public(file_number)
-            sap_task = fetch_sap_lookup(file_number)
-            smart_data, bills_data, sap_data = await asyncio.gather(
-                smart_task, bills_task, sap_task, return_exceptions=True,
-            )
-
-            # Handle exceptions from gather
-            if isinstance(smart_data, Exception):
-                logger.warning("Smart meter fetch error: %s", smart_data)
-                smart_data = None
-            if isinstance(bills_data, Exception):
-                logger.warning("Bills fetch error: %s", bills_data)
+            # Use client-provided data if available (browser → JEPCO direct)
+            if jepco_data and jepco_data.get('smart_meter'):
+                logger.info("Using client-provided JEPCO data for %s", file_number)
+                smart_data = jepco_data['smart_meter']
+                bills_data = jepco_data.get('bills')
+                sap_data = jepco_data.get('sap')
+            else:
+                # Server-side fetch — SmartMeter only (no auth needed)
+                smart_data = await fetch_smart_meter(file_number)
                 bills_data = None
-            if isinstance(sap_data, Exception):
-                logger.warning("SAP lookup error: %s", sap_data)
                 sap_data = None
 
             if not smart_data or not smart_data.get('showSmartMeterFeature'):
@@ -312,33 +329,19 @@ class LLMService:
                 smart_data, file_number, bills_data, sap_data,
             )
 
-            # GPT-4o deep analysis + Claude bill analysis — concurrently
-            gpt4o_task = self._gpt4o_deep_analysis(smart_data, file_number)
-            sonnet_task = self._sonnet_bill_analysis(
-                smart_data, file_number, bills_data,
-            )
-            gpt4o_result, sonnet_result = await asyncio.gather(
-                gpt4o_task, sonnet_task, return_exceptions=True,
-            )
+            # Claude bill analysis only (GPT-4o removed to reduce response length)
+            sonnet_result = None
+            try:
+                sonnet_result = await self._sonnet_bill_analysis(
+                    smart_data, file_number, bills_data,
+                )
+            except Exception as e:
+                logger.warning("Sonnet analysis error: %s", e)
 
-            # Handle exceptions
-            if isinstance(gpt4o_result, Exception):
-                logger.warning("GPT-4o analysis error: %s", gpt4o_result)
-                gpt4o_result = None
-            if isinstance(sonnet_result, Exception):
-                logger.warning("Sonnet analysis error: %s", sonnet_result)
-                sonnet_result = None
-
-            # Combine all parts — no model names exposed to user
-            parts = [template_text]
-
+            # Combine: structured template + Claude analysis
+            response_text = template_text
             if sonnet_result:
-                parts.append(f"\n\nتحليل الفاتورة:\n{sonnet_result}")
-
-            if gpt4o_result:
-                parts.append(f"\n\nتحليل الاستهلاك الذكي:\n{gpt4o_result}")
-
-            response_text = ''.join(parts)
+                response_text += f"\n\n{sonnet_result}"
 
             # Build subscriber info from SAP data
             subscriber_info = None
@@ -365,16 +368,17 @@ class LLMService:
                     'intent': intent,
                     'file_number': file_number,
                     'source': 'jepco_live',
+                    'awaiting': 'appliance_list',
                     'subscriber': subscriber_info,
                     'models_used': {
                         'data': 'jepco_smart_meter',
-                        'reasoning': 'gpt-4o' if gpt4o_result else None,
                         'bill_analysis': 'claude-sonnet' if sonnet_result else None,
                     },
                     'bills_found': len(bills_data) if isinstance(bills_data, list) else 0,
                     'current_kwh': smart_data.get('currentElectricityConsumptionQuntity'),
                     'bill_estimate': smart_data.get('expectedElectricityCurrentBillAmount'),
                     'projected_bill': smart_data.get('expectedElectricityEndofMonthBillAmount'),
+                    'projected_kwh': smart_data.get('expectedElectricityConsumptionQuntity'),
                 },
             }
 
@@ -438,7 +442,7 @@ class LLMService:
                     "- كن مختصراً وواضحاً\n"
                     "- أجب دائماً بالعربية"
                 ),
-                max_tokens=800,
+                max_tokens=500,
                 model=FAST_GPT,
             )
             return result
@@ -494,19 +498,23 @@ class LLMService:
                 messages=[{'role': 'user', 'content': data_prompt}],
                 system_prompt=(
                     "أنت محلل فواتير كهرباء متخصص في نظام التعرفة الأردني.\n"
-                    "حلّل بيانات الفاتورة وقدّم:\n"
-                    "1. تفصيل الفاتورة حسب الشرائح السبع "
-                    "(33/72/86/114/158/188/265 فلس/kWh)\n"
-                    "2. كم ستوفر لو خفضت استهلاكك لشريحة أقل (بالدينار)\n"
-                    "3. اتجاه الاستهلاك (تصاعدي/تنازلي) مع السبب المحتمل\n\n"
+                    "مرجع الحساب الإلزامي (كل الأسعار بالدينار):\n"
+                    "  الشريحة 1: أول 300 kWh × 0.050 دينار = 15.000 دينار\n"
+                    "  الشريحة 2: من 301 لـ 600 kWh × 0.100 دينار (مثال: 300 × 0.100 = 30.000 دينار)\n"
+                    "  الشريحة 3: فوق 600 kWh × 0.200 دينار\n"
+                    "اعرض كل المبالغ بالدينار فقط. لا تستخدم فلس نهائياً.\n\n"
+                    "أعطِ نصيحة توفير واحدة محددة بناءً على البيانات.\n"
+                    "اذكر أوقات الذروة: شغّل الأجهزة الثقيلة بعد 9 مساءً.\n"
+                    "اكتب كأنك تكلم جارك — بسيط وواضح.\n"
+                    "احسب بدقة ولا تترك الحساب ناقصاً.\n\n"
                     "قواعد التنسيق الصارمة:\n"
                     "- لا تستخدم Markdown أبداً (ممنوع: # ## ** ``` - 1️⃣ أو أي رموز تنسيق)\n"
                     "- اكتب نصاً عادياً فقط مع أسطر جديدة للفصل\n"
                     "- لا تبدأ بتحية أو مرحباً — ادخل بالتحليل مباشرة\n"
-                    "- كن دقيقاً بالأرقام ومختصراً. 4-5 جمل كافية.\n"
+                    "- أجب بـ3-4 جمل فقط. لا أكثر. كل جملة تضيف معلومة جديدة.\n"
                     "- أجب دائماً بالعربية"
                 ),
-                max_tokens=400,
+                max_tokens=250,
                 model=FAST_CLAUDE,
             )
             return result
@@ -568,25 +576,62 @@ class LLMService:
         lm_dir = 'انخفاض' if lm_pct < 0 else 'زيادة'
         ly_dir = 'انخفاض' if ly_pct < 0 else 'زيادة'
 
-        # Tariff tier estimation (Jordan residential)
+        # Tariff tier estimation + bill breakdown (Jordan residential)
+        # 1 JOD = 1000 fils. Tiers: 0-300@0.050JOD, 301-600@0.100JOD, 600+@0.200JOD
+        tier = '—'
+        bill_breakdown_lines = []
+        savings_advice = ''
         try:
             exp_f = float(exp_kwh)
-            if exp_f <= 160:
-                tier = 'الشريحة 1 (33 فلس/kWh)'
-            elif exp_f <= 300:
-                tier = 'الشريحة 2 (72 فلس/kWh)'
-            elif exp_f <= 500:
-                tier = 'الشريحة 3 (86 فلس/kWh)'
+            if exp_f <= 300:
+                tier = 'الشريحة 1 (0.050 JOD/kWh)'
+                cost_jod = exp_f * 0.050
+                bill_breakdown_lines = [
+                    "تفصيل الفاتورة المتوقعة:",
+                    f"  {exp_f:.0f} kWh × 0.050 = {cost_jod:.3f} دينار",
+                    f"  الإجمالي: {cost_jod:.3f} دينار (+ رسوم وضرائب)",
+                ]
             elif exp_f <= 600:
-                tier = 'الشريحة 4 (114 فلس/kWh)'
-            elif exp_f <= 750:
-                tier = 'الشريحة 5 (158 فلس/kWh)'
-            elif exp_f <= 1000:
-                tier = 'الشريحة 6 (188 فلس/kWh)'
+                tier = 'الشريحة 2 (0.100 JOD/kWh)'
+                t1_jod = 300 * 0.050  # 15.000
+                t2_kwh = exp_f - 300
+                t2_jod = t2_kwh * 0.100
+                cost_jod = t1_jod + t2_jod
+                bill_breakdown_lines = [
+                    "تفصيل الفاتورة المتوقعة:",
+                    f"  300 kWh × 0.050 = {t1_jod:.3f} دينار",
+                    f"  {t2_kwh:.0f} kWh × 0.100 = {t2_jod:.3f} دينار",
+                    f"  الإجمالي: {cost_jod:.3f} دينار (+ رسوم وضرائب)",
+                ]
+                # Savings advice: how much to cut to stay in Tier 1
+                savings_advice = (
+                    f"\nنصيحة التوفير:\n"
+                    f"لو خفّضت استهلاكك {t2_kwh:.0f} kWh وبقيت تحت 300 kWh/شهر، "
+                    f"بتوفّر {t2_jod:.3f} دينار لأنك بتتجنب الشريحة الثانية الأغلى."
+                )
             else:
-                tier = 'الشريحة 7 (265 فلس/kWh)'
+                tier = 'الشريحة 3 (0.200 JOD/kWh)'
+                t1_jod = 300 * 0.050   # 15.000
+                t2_jod = 300 * 0.100   # 30.000
+                t3_kwh = exp_f - 600
+                t3_jod = t3_kwh * 0.200
+                cost_jod = t1_jod + t2_jod + t3_jod
+                bill_breakdown_lines = [
+                    "تفصيل الفاتورة المتوقعة:",
+                    f"  300 kWh × 0.050 = {t1_jod:.3f} دينار",
+                    f"  300 kWh × 0.100 = {t2_jod:.3f} دينار",
+                    f"  {t3_kwh:.0f} kWh × 0.200 = {t3_jod:.3f} دينار",
+                    f"  الإجمالي: {cost_jod:.3f} دينار (+ رسوم وضرائب)",
+                ]
+                # Savings advice: how much to cut to drop a tier
+                over_600 = exp_f - 600
+                savings_advice = (
+                    f"\nنصيحة التوفير:\n"
+                    f"لو خفّضت استهلاكك {over_600:.0f} kWh وبقيت تحت 600 kWh/شهر، "
+                    f"بتوفّر {t3_jod:.3f} دينار لأنك بتتجنب الشريحة الثالثة الأغلى."
+                )
         except ValueError:
-            tier = '—'
+            pass
 
         # Build structured response
         lines = []
@@ -624,7 +669,18 @@ class LLMService:
             f"المعدل اليومي: {avg} kWh/يوم",
             f"الفاتورة الحالية: {cur_bill} دينار",
             f"الفاتورة المتوقعة نهاية الشهر: {end_bill} دينار",
-            f"شريحة التعرفة: {tier}",
+            f"شريحتك: {tier}",
+        ])
+        if bill_breakdown_lines:
+            lines.append("")
+            lines.extend(bill_breakdown_lines)
+        if savings_advice:
+            lines.append(savings_advice)
+        # Peak hours advice
+        lines.append("")
+        lines.append("أوقات الذروة (الأغلى): 7 صباحاً - 5 عصراً")
+        lines.append("شغّل الغسالة والسخان بعد 9 مساءً وقبل 7 صباحاً للتوفير.")
+        lines.extend([
             "",
             "المقارنة:",
             f"  الشهر الماضي: {last_month} kWh ({lm_dir} {abs(lm_pct)}%)",
@@ -633,19 +689,18 @@ class LLMService:
             f"قراءة العداد: {last_read} ← {cur_read} ({read_date})",
         ])
 
-        # Full daily breakdown with day names
-        if daily:
+        # Top 3 peak days only (full daily breakdown shown in sidebar chart)
+        if peak_days:
             lines.append("")
-            lines.append("الاستهلاك اليومي المفصّل:")
-            for d in daily:
+            lines.append("أعلى 3 أيام استهلاكاً:")
+            for d in peak_days:
                 date_str = d.get('date', '')
                 kwh = d.get('consumptionAtDate', '0')
                 try:
                     from datetime import datetime as _dt
                     dt = _dt.strptime(date_str, '%Y-%m-%d')
                     day_name = day_names_ar.get(dt.weekday(), '')
-                    marker = ' ⚡' if d in peak_days else ''
-                    lines.append(f"  {date_str} ({day_name}): {kwh} kWh{marker}")
+                    lines.append(f"  {date_str} ({day_name}): {kwh} kWh")
                 except (ValueError, TypeError):
                     lines.append(f"  {date_str}: {kwh} kWh")
 
@@ -666,7 +721,113 @@ class LLMService:
             lines.append("")
             lines.append(f"ملاحظة: {caution}")
 
+        # Appliance conversation prompt
+        lines.append("")
+        lines.append(
+            "عشان أساعدك أكثر، قولي شو الأجهزة الكهربائية اللي عندك بالبيت؟ "
+            "(مكيف، سخان، غسالة، ثلاجة...)"
+        )
+
         return '\n'.join(lines)
+
+    async def _analyze_appliances(
+        self, text: str, file_number: str, session_context: dict,
+    ) -> dict:
+        """
+        Analyze user-listed appliances against actual JEPCO consumption.
+
+        Matches appliance keywords from user text against APPLIANCE_KWH,
+        sums expected monthly kWh, and compares with actual consumption.
+        """
+        # Parse appliance keywords from user text
+        matched = {}
+        text_lower = text
+        for key, info in APPLIANCE_KWH.items():
+            if key in text_lower or info['name_en'].lower() in text_lower.lower():
+                matched[key] = info
+
+        if not matched:
+            return {
+                'response_text': (
+                    "ما قدرت أتعرف على أجهزة من رسالتك. "
+                    "اذكر الأجهزة بالاسم مثل: مكيف، سخان، ثلاجة، غسالة، تلفزيون، إضاءة، كمبيوتر، فرن، مكواة، مجفف."
+                ),
+                'response_type': 'text',
+                'metadata': {
+                    'intent': 'appliance_analysis',
+                    'file_number': file_number,
+                    'awaiting': 'appliance_list',
+                },
+            }
+
+        # Calculate expected total
+        total_expected = sum(info['kwh_per_month'] for info in matched.values())
+
+        # Get actual consumption from session context or metadata
+        actual_kwh = 0
+        try:
+            actual_kwh = float(session_context.get('projected_kwh', 0))
+        except (ValueError, TypeError):
+            pass
+
+        # Build appliance breakdown
+        lines = ["بناءً على أجهزتك:"]
+        for info in matched.values():
+            lines.append(f"  {info['name_ar']}: ~{info['kwh_per_month']} kWh/شهر")
+        lines.append(f"  المجموع المتوقع: ~{total_expected} kWh/شهر")
+
+        if actual_kwh > 0:
+            lines.append("")
+            lines.append(f"استهلاكك الفعلي المتوقع: {actual_kwh:.0f} kWh/شهر")
+            diff = abs(actual_kwh - total_expected)
+            diff_pct = (diff / actual_kwh * 100) if actual_kwh else 0
+
+            if diff_pct <= 30:
+                lines.append(
+                    f"الفرق: {diff:.0f} kWh فقط — الأرقام متطابقة تقريباً"
+                )
+            else:
+                direction = "زيادة" if actual_kwh > total_expected else "أقل"
+                lines.append(
+                    f"فرق كبير بين المتوقع ({total_expected} kWh) والفعلي ({actual_kwh:.0f} kWh) — "
+                    f"~{diff_pct:.0f}% {direction}."
+                )
+                lines.extend([
+                    "ممكن يكون في:",
+                    "  1. جهاز يشتغل بدون ما تحس (سخان مياه، فلتر مسبح)",
+                    "  2. تسريب كهربائي أو عداد فيه مشكلة",
+                    "",
+                    "ننصحك:",
+                    "  اطلب فحص من فني كهرباء معتمد",
+                    "  أو قدّم شكوى لجيبكو عبر 117 أو فروعهم",
+                ])
+
+        # Find top consumers and give specific advice
+        sorted_appliances = sorted(
+            matched.values(), key=lambda x: x['kwh_per_month'], reverse=True,
+        )
+        if len(sorted_appliances) >= 2 and total_expected > 0:
+            top_two = sorted_appliances[:2]
+            top_pct = sum(a['kwh_per_month'] for a in top_two) / total_expected * 100
+            names = ' و'.join(a['name_ar'] for a in top_two)
+            lines.append("")
+            lines.append(f"{names} هم {top_pct:.0f}% من استهلاكك. ركّز عليهم:")
+            if any(a['name_en'] == 'Water Heater' for a in sorted_appliances):
+                lines.append("  شغّل السخان ساعة وحدة بدل ساعتين — توفّر ~60 kWh = 6.000 دينار/شهر")
+            if any(a['name_en'] == 'AC' for a in sorted_appliances):
+                lines.append("  ارفع حرارة المكيف لـ 24 درجة — توفّر ~30 kWh")
+
+        return {
+            'response_text': '\n'.join(lines),
+            'response_type': 'appliance_analysis',
+            'metadata': {
+                'intent': 'appliance_analysis',
+                'file_number': file_number,
+                'appliances': list(matched.keys()),
+                'expected_kwh': total_expected,
+                'actual_kwh': actual_kwh,
+            },
+        }
 
     async def _try_crew(self, *, text: str, intent: str) -> dict | None:
         """

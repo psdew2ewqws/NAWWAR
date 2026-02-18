@@ -16,10 +16,31 @@
         height: calc(100vh - 160px);
         min-height: 540px;
     }
+    /* Base sidebar — must be BEFORE media queries so overrides work */
+    .app-sidebar { display: flex; flex-direction: column; gap: var(--gap-md); }
+
     @media (max-width: 1024px) {
         .app-layout { grid-template-columns: 1fr; height: auto; min-height: 70vh; }
         .app-sidebar { display: none; }
     }
+
+    /* ─── Mobile: sidebar toggle button ─── */
+    .mobile-sidebar-toggle {
+        display: none;
+        width: 44px; height: 44px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-subtle);
+        background: var(--bg-elevated);
+        color: var(--text-secondary);
+        cursor: pointer;
+        align-items: center; justify-content: center;
+        flex-shrink: 0;
+        transition: all 0.15s;
+    }
+    .mobile-sidebar-toggle:hover { color: var(--text-primary); border-color: var(--border-default); }
+    .mobile-sidebar-toggle svg { width: 18px; height: 18px; }
+
+
 
     /* ─── Chat Container ─── */
     .chat-container {
@@ -120,6 +141,31 @@
         margin-bottom: 4px; font-size: 0.875rem;
     }
 
+    /* ─── TTS Play Button ─── */
+    .tts-play-btn {
+        display: inline-flex; align-items: center; gap: 5px;
+        margin-top: 8px; padding: 4px 10px;
+        background: rgba(201,209,217,0.06); border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md); cursor: pointer;
+        font-size: 0.6875rem; color: var(--text-muted);
+        font-family: var(--mono); transition: all 0.15s;
+    }
+    .tts-play-btn:hover { color: var(--text-primary); border-color: var(--border-default); }
+    .tts-play-btn.playing { color: var(--operational); border-color: var(--operational-border); }
+    .tts-play-btn svg { width: 12px; height: 12px; }
+
+    /* ─── TTS Toggle ─── */
+    .tts-toggle {
+        display: flex; align-items: center; gap: 5px;
+        font-size: 0.6875rem; color: var(--text-muted);
+        cursor: pointer; padding: 4px 8px;
+        border: 1px solid transparent; border-radius: var(--radius-md);
+        transition: all 0.15s; font-family: var(--mono); user-select: none;
+    }
+    .tts-toggle:hover { color: var(--text-secondary); }
+    .tts-toggle.active { color: var(--operational); border-color: var(--operational-border); background: var(--operational-bg); }
+    .tts-toggle svg { width: 14px; height: 14px; }
+
     /* ─── Capability Chips ─── */
     .capabilities {
         display: grid; grid-template-columns: 1fr 1fr;
@@ -203,8 +249,7 @@
     }
     .upload-bar-x:hover { color: var(--critical); }
 
-    /* ─── Sidebar ─── */
-    .app-sidebar { display: flex; flex-direction: column; gap: var(--gap-md); }
+    /* ─── Sidebar cards ─── */
     .s-card {
         background: var(--bg-surface);
         border: 1px solid var(--border-subtle);
@@ -347,6 +392,151 @@
         border-radius: 3px; font-weight: 600; text-transform: uppercase;
         background: var(--operational-bg); color: var(--operational); border: 1px solid var(--operational-border);
     }
+
+    /* ═══════════════════════════════════════════
+       Mobile overrides — MUST be last so they
+       win the cascade over base rules above
+       ═══════════════════════════════════════════ */
+    @media (max-width: 768px) {
+        /* Hide page header — chat IS the page */
+        .page-header { display: none; }
+
+        .app-layout {
+            grid-template-columns: 1fr;
+            height: calc(100vh - 52px);
+            height: calc(100dvh - 52px);
+            gap: 0;
+            min-height: 0;
+        }
+
+        /* Full-screen chat */
+        .chat-container {
+            border-radius: 0;
+            border: none;
+            height: 100%;
+            box-shadow: none;
+        }
+        .chat-container::before { display: none; }
+
+        .chat-messages {
+            padding: var(--gap-md);
+            gap: var(--gap-md);
+        }
+        .msg { max-width: 95%; }
+        .msg-bubble {
+            padding: var(--gap-md) var(--gap-lg);
+            font-size: 0.9375rem;
+            line-height: 1.7;
+        }
+        .msg-avatar {
+            width: 28px; height: 28px;
+            font-size: 0.5rem;
+        }
+        .msg-bubble-title {
+            font-size: 1rem;
+        }
+
+        /* Capability chips: single column for full readable text */
+        .capabilities {
+            grid-template-columns: 1fr;
+            gap: 6px;
+        }
+        .cap-chip {
+            padding: 12px 16px;
+            font-size: 0.9375rem;
+            min-height: 44px;
+        }
+        .cap-icon {
+            width: 18px; height: 18px;
+        }
+
+        /* Chat input: mobile keyboard-friendly */
+        .chat-input-wrap {
+            padding: var(--gap-sm) var(--gap-md);
+            padding-bottom: env(safe-area-inset-bottom, var(--gap-sm));
+        }
+        .chat-input-bar {
+            border-radius: var(--radius-lg);
+            padding: 4px;
+        }
+        .chat-input {
+            font-size: 1rem;
+            padding: 10px 12px;
+        }
+        .input-btn {
+            width: 44px; height: 44px;
+            border-radius: var(--radius-md);
+        }
+        .input-btn svg { width: 20px; height: 20px; }
+
+        /* Chat header: clean single row */
+        .chat-header {
+            padding: 8px var(--gap-md);
+            gap: var(--gap-sm);
+        }
+        .chat-header-title {
+            font-size: 0.875rem;
+        }
+        .chat-header > div:last-child {
+            gap: 6px;
+        }
+        /* Hide "new chat" link on mobile */
+        .chat-header > div:last-child > a[href*="consumer"] {
+            display: none;
+        }
+        /* Hide READY badge on mobile */
+        .panel-badge { display: none; }
+
+        /* TTS toggle: icon-only on mobile */
+        .tts-toggle {
+            padding: 8px;
+            min-height: 44px;
+            font-size: 0;
+        }
+        .tts-toggle svg { width: 18px; height: 18px; }
+        .tts-play-btn {
+            padding: 8px 14px;
+            min-height: 44px;
+            font-size: 0.75rem;
+        }
+
+        /* Sidebar: slide-in overlay on mobile */
+        .app-sidebar {
+            display: none;
+            position: fixed;
+            top: 48px;
+            left: 0; right: 0; bottom: 0;
+            background: var(--bg-base);
+            z-index: 900;
+            padding: var(--gap-md);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .app-sidebar.mobile-open {
+            display: flex;
+        }
+
+        /* Show sidebar toggle button */
+        .mobile-sidebar-toggle { display: flex; }
+
+        /* Upload bar */
+        .upload-bar { font-size: 0.6875rem; padding: 8px var(--gap-md); }
+
+        /* Quick action buttons */
+        .qa {
+            padding: 12px;
+            min-height: 44px;
+            font-size: 0.8125rem;
+        }
+
+        /* Prevent horizontal overflow */
+        .chat-messages,
+        .s-card-body,
+        .msg-bubble {
+            overflow-x: hidden;
+            word-break: break-word;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -372,8 +562,15 @@
                 <span class="chat-header-ver">v2.0</span>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="tts-toggle" id="tts-toggle" title="تفعيل الرد الصوتي">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+                    صوت
+                </div>
                 <a href="{% url 'dashboard:consumer-index' %}" style="font-size: 0.6875rem; color: var(--text-secondary); text-decoration: none; padding: 4px 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); transition: all 0.15s; font-family: var(--mono);" onmouseover="this.style.borderColor='var(--border-default)';this.style.color='var(--text-primary)'" onmouseout="this.style.borderColor='var(--border-subtle)';this.style.color='var(--text-secondary)'">+ محادثة جديدة</a>
                 <span class="panel-badge" style="background: var(--operational-bg); color: var(--operational); border: 1px solid var(--operational-border);">READY</span>
+                <button class="mobile-sidebar-toggle" id="mobile-sidebar-toggle" title="القائمة الجانبية">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                </button>
             </div>
         </div>
         <div class="chat-messages" id="chat-messages">
@@ -437,27 +634,21 @@
             <div class="s-card-body" style="display: flex; align-items: center; gap: 8px; padding: 10px var(--gap-lg);">
                 <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--operational); box-shadow: 0 0 6px var(--operational);"></span>
                 <span style="font-size: 0.75rem; color: var(--text-primary); font-weight: 500;">نوّر جاهز</span>
-                <span style="font-family: var(--mono); font-size: 0.5rem; color: var(--text-muted); margin-right: auto; text-transform: uppercase;">GPT-4o &bull; Claude &bull; Whisper</span>
             </div>
         </div>
         <div class="s-card" id="tariff-card">
             <div class="s-card-head"><span class="s-dot" style="background: #d4a843;"></span> التعرفة السكنية</div>
             <div class="s-card-body">
                 <div class="t-strip" id="tariff-strip">
-                    <div class="t-seg" data-tier="1" style="flex: 160; background: #2ea043;"></div>
-                    <div class="t-seg" data-tier="2" style="flex: 140; background: #3fb950;"></div>
-                    <div class="t-seg" data-tier="3" style="flex: 200; background: #8dc572;"></div>
-                    <div class="t-seg" data-tier="4" style="flex: 100; background: #d29922;"></div>
-                    <div class="t-seg" data-tier="5" style="flex: 150; background: #e3b341;"></div>
-                    <div class="t-seg" data-tier="6" style="flex: 250; background: #f0883e;"></div>
-                    <div class="t-seg" data-tier="7" style="flex: 200; background: #da3633;"></div>
+                    <div class="t-seg" data-tier="1" style="flex: 300; background: #2ea043;"></div>
+                    <div class="t-seg" data-tier="2" style="flex: 300; background: #d29922;"></div>
+                    <div class="t-seg" data-tier="3" style="flex: 200; background: #da3633;"></div>
                 </div>
                 <div class="t-ticks" id="tariff-ticks">
-                    <span class="t-tick">265</span><span class="t-tick">188</span><span class="t-tick">158</span>
-                    <span class="t-tick">114</span><span class="t-tick">86</span><span class="t-tick">72</span><span class="t-tick">33</span>
+                    <span class="t-tick">0.200</span><span class="t-tick">0.100</span><span class="t-tick">0.050</span>
                 </div>
                 <div style="margin-top: 8px; font-size: 0.6875rem; color: var(--text-muted); display: flex; justify-content: space-between;">
-                    <span>فلس/كيلوواط ساعة</span>
+                    <span>JOD/kWh</span>
                     <span id="tariff-label" style="color: #d4a843; font-family: var(--mono); font-weight: 600;">--</span>
                 </div>
             </div>
@@ -481,14 +672,6 @@
                 <button class="qa" data-action="compare">مقارنة الاستهلاك <span class="qa-tag" style="background: var(--warning-bg); color: var(--warning);">beta</span></button>
             </div>
         </div>
-        <div class="s-card" style="margin-top: auto;">
-            <div class="s-card-body" style="font-size: 0.5625rem; color: var(--text-muted); font-family: var(--mono); line-height: 1.9; letter-spacing: 0.2px;">
-                <div style="display: flex; justify-content: space-between;"><span>VISION</span><span style="color: var(--text-secondary);">GPT-4o</span></div>
-                <div style="display: flex; justify-content: space-between;"><span>REASONING</span><span style="color: var(--text-secondary);">Claude</span></div>
-                <div style="display: flex; justify-content: space-between;"><span>SPEECH</span><span style="color: var(--text-secondary);">Whisper + Edge-TTS</span></div>
-                <div style="display: flex; justify-content: space-between;"><span>KNOWLEDGE</span><span style="color: var(--text-secondary);">ChromaDB RAG</span></div>
-            </div>
-        </div>
     </div>
 </div>
 {% endblock %}
@@ -509,6 +692,33 @@
     var rec = false, mr = null;
     var sessionKey = '{{ session_key|default:"" }}';
     var lastFileNumber = '{{ file_number|default:"" }}' || null;
+    var ttsEnabled = false;
+    var ttsToggle = document.getElementById('tts-toggle');
+    if (ttsToggle) ttsToggle.addEventListener('click', function() {
+        ttsEnabled = !ttsEnabled;
+        ttsToggle.classList.toggle('active', ttsEnabled);
+    });
+
+    /* ── Provider Direct API ── */
+    var JEPCO_BASE = 'https://mobile.j****.com.jo:443/J****BackendSystemPRD';
+    var FILE_NUM_RE = /\b(0\d{12})\b/;
+
+    function jepcoFetchSmartMeter(fileNumber) {
+        return fetch(JEPCO_BASE + '/Dashboard/SmartMeterDashboard', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({FileNumber: fileNumber, LanguageId: 'AR'})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.statusCode === 'Success' && data.body) return data.body;
+            return null;
+        })
+        .catch(function(e) {
+            console.warn('SmartMeter direct call failed:', e);
+            return null;
+        });
+    }
 
     function addMsg(t, h) {
         var el = document.createElement('div');
@@ -521,6 +731,32 @@
     }
     function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
+    /* ── TTS Playback ── */
+    var ttsCache = {};
+    var ttsCounter = 0;
+    var currentAudio = null;
+    window.playTTS = function(btn) {
+        var id = btn.getAttribute('data-tts-id');
+        var b64 = ttsCache[id];
+        if (!b64) return;
+        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+        var wasPlaying = btn.classList.contains('playing');
+        document.querySelectorAll('.tts-play-btn.playing').forEach(function(el) {
+            el.classList.remove('playing');
+            el.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> تشغيل الصوت';
+        });
+        if (wasPlaying) return;
+        btn.classList.add('playing');
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> جارٍ التشغيل...';
+        currentAudio = new Audio('data:audio/mp3;base64,' + b64);
+        currentAudio.play().catch(function() {});
+        currentAudio.onended = function() {
+            btn.classList.remove('playing');
+            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> تشغيل الصوت';
+            currentAudio = null;
+        };
+    };
+
     function showTyping() {
         var dot = document.createElement('div');
         dot.className = 'msg msg-system'; dot.id = 'typing-ind';
@@ -532,6 +768,8 @@
     }
 
     /* ── Text chat ── */
+    var lastSendFetchedFile = null;
+
     function send(text) {
         if (!text.trim()) return;
         addMsg('user', esc(text));
@@ -541,11 +779,36 @@
         var payload = {message: text};
         if (sessionKey) payload.session_key = sessionKey;
         if (lastFileNumber) payload.file_number = lastFileNumber;
+        if (ttsEnabled) payload.tts = true;
 
-        fetch('/nawwar/api/chat/', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
+        /* Detect file number → pre-fetch data from user's browser */
+        var fileMatch = text.match(FILE_NUM_RE);
+        var providerPromise = Promise.resolve(null);
+
+        if (fileMatch) {
+            var fn = fileMatch[1];
+            payload.file_number = fn;
+            lastFileNumber = fn;
+            lastSendFetchedFile = fn;
+            /* Fetch smart meter data from browser */
+            providerPromise = jepcoFetchSmartMeter(fn).then(function(sm) {
+                return {smart_meter: sm};
+            });
+        }
+
+        providerPromise.then(function(providerData) {
+            /* If we got provider data from browser, attach it to the payload */
+            if (providerData && providerData.smart_meter) {
+                payload.jepco_data = providerData;
+                /* Also update the sidebar smart meter widget */
+                renderSmartMeterData(fileMatch[1], providerData.smart_meter, null);
+            }
+
+            return fetch('/nawwar/api/chat/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
@@ -555,17 +818,31 @@
                 return;
             }
             var html = esc(data.reply).replace(/\n/g, '<br>');
+            if (data.audio_b64) {
+                var ttsId = 'tts-' + (++ttsCounter);
+                ttsCache[ttsId] = data.audio_b64;
+                html += '<button class="tts-play-btn" data-tts-id="' + ttsId + '" onclick="playTTS(this)">'
+                    + '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> تشغيل الصوت</button>';
+            }
             if (data.processing_ms) {
                 html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-subtle);font-family:var(--mono);font-size:0.625rem;color:var(--text-muted)">'
                     + (data.intent ? data.intent.toUpperCase() + ' &bull; ' : '') + data.processing_ms + 'ms</div>';
             }
             addMsg('system', html);
+            /* Auto-play if TTS is on */
+            if (data.audio_b64 && ttsEnabled) {
+                var a = new Audio('data:audio/mp3;base64,' + data.audio_b64);
+                a.play().catch(function() {});
+            }
 
             /* When chat returns a file_number, remember it and load sidebar */
             if (data.file_number) {
                 lastFileNumber = data.file_number;
-                loadSmartMeter(data.file_number);
+                if (lastSendFetchedFile !== data.file_number) {
+                    loadSmartMeter(data.file_number);
+                }
             }
+            lastSendFetchedFile = null;
         })
         .catch(function() {
             hideTyping();
@@ -711,13 +988,9 @@
        ══════════════════════════════════════════════════ */
     function updateTariff(kwh) {
         var tiers = [
-            { max: 160, label: 'T1: 1-160', rate: 33, idx: 0 },
-            { max: 300, label: 'T2: 161-300', rate: 72, idx: 1 },
-            { max: 500, label: 'T3: 301-500', rate: 86, idx: 2 },
-            { max: 600, label: 'T4: 501-600', rate: 114, idx: 3 },
-            { max: 750, label: 'T5: 601-750', rate: 158, idx: 4 },
-            { max: 1000, label: 'T6: 751-1000', rate: 188, idx: 5 },
-            { max: Infinity, label: 'T7: 1000+', rate: 265, idx: 6 },
+            { max: 300, label: 'T1: 1-300', rate: 50, idx: 0 },
+            { max: 600, label: 'T2: 301-600', rate: 100, idx: 1 },
+            { max: Infinity, label: 'T3: 600+', rate: 200, idx: 2 },
         ];
         var tier = tiers[tiers.length - 1];
         for (var i = 0; i < tiers.length; i++) {
@@ -729,7 +1002,7 @@
         /* Highlight active tick */
         var ticks = document.querySelectorAll('#tariff-ticks .t-tick');
         ticks.forEach(function(t) { t.classList.remove('on'); });
-        if (ticks[6 - tier.idx]) ticks[6 - tier.idx].classList.add('on');
+        if (ticks[2 - tier.idx]) ticks[2 - tier.idx].classList.add('on');
 
         /* Highlight active tier segment */
         var segs = document.querySelectorAll('#tariff-strip .t-seg');
@@ -737,119 +1010,124 @@
         if (segs[tier.idx]) segs[tier.idx].style.opacity = '1';
     }
 
-    function loadSmartMeter(fileNumber) {
+    /* ── Render smart meter data into sidebar widget ── */
+    function renderSmartMeterData(fileNumber, sm, sub) {
         var body = document.getElementById('sm-body');
         var tag = document.getElementById('sm-tag');
         if (!body) return;
+
+        if (!sm || !sm.showSmartMeterFeature) {
+            body.innerHTML = '<div class="sm-loader-wrap"><div class="sm-loader-text" style="color:var(--text-muted)">أدخل رقم الملف في المحادثة لعرض بيانات العداد</div></div>';
+            tag.innerHTML = '';
+            return;
+        }
+
+        tag.innerHTML = '<span class="sm-live-tag">LIVE</span>';
+
+        /* Update tariff based on expected consumption */
+        var expKwh = parseFloat(sm.expectedElectricityConsumptionQuntity) || 0;
+        updateTariff(expKwh);
+
+        var currentKwh = sm.currentElectricityConsumptionQuntity || '0';
+        var expectedKwh = sm.expectedElectricityConsumptionQuntity || '0';
+        var currentBill = sm.expectedElectricityCurrentBillAmount || '0';
+        var endBill = sm.expectedElectricityEndofMonthBillAmount || '0';
+        var days = sm.numberOfConsumptionDaysSinceLastRead || '0';
+        var lastReading = sm.lastBillReading || '--';
+        var curReading = sm.currentReading || '--';
+        var comp = sm.comparazinConsumption || {};
+
+        /* ── Subscriber info card ── */
+        var html = '';
+        if (sub && sub.name) {
+            html += '<div style="padding:6px 0 8px;border-bottom:1px solid var(--border-subtle);margin-bottom:8px">';
+            html += '<div style="font-size:0.75rem;font-weight:600;color:var(--text-heading)">' + esc(sub.name) + '</div>';
+            html += '<div style="font-family:var(--mono);font-size:0.6rem;color:var(--text-muted);margin-top:2px">';
+            html += esc(sub.subscriptionType || '') + ' \u00B7 ' + esc(sub.office || '');
+            html += '</div>';
+            if (sub.meterNumber) {
+                html += '<div style="font-family:var(--mono);font-size:0.55rem;color:var(--text-muted);margin-top:1px">METER: ' + esc(sub.meterNumber) + ' (' + esc(sub.meterType || '') + ')</div>';
+            }
+            var bal = parseFloat(sub.balance) || 0;
+            html += '<div style="font-size:0.6rem;margin-top:2px;color:' + (bal > 0 ? 'var(--danger)' : 'var(--success)') + '">';
+            html += bal > 0 ? ('\u25CF ' + sub.balance + ' JOD DUE') : '\u25CF لا يوجد مبالغ مستحقة';
+            html += '</div></div>';
+        }
+
+        /* ── Main stats ── */
+        html += '<div class="sm-grid">';
+        html += '<div class="sm-cell"><div class="sm-val">' + currentBill + '</div><div class="sm-lbl">JOD BILL EST.</div></div>';
+        html += '<div class="sm-cell"><div class="sm-val">' + currentKwh + '</div><div class="sm-lbl">kWh (' + days + ' DAY)</div></div>';
+        html += '<div class="sm-cell"><div class="sm-val" style="color:var(--warning)">' + endBill + '</div><div class="sm-lbl">JOD END-MONTH</div></div>';
+        html += '<div class="sm-cell"><div class="sm-val" style="color:var(--info)">' + expectedKwh + '</div><div class="sm-lbl">kWh PROJECTED</div></div>';
+        html += '</div>';
+
+        /* ── Consumption comparison bars ── */
+        if (comp.expectedMonthConsumption) {
+            var cur = parseFloat(comp.expectedMonthConsumption) || 1;
+            var last = parseFloat(comp.lastMonthconsumption) || 0;
+            var yr = parseFloat(comp.lastYearconsumption) || 0;
+            var maxV = Math.max(cur, last, yr);
+
+            html += '<div class="sm-bar-wrap">';
+            html += '<div class="sm-bar-row"><span class="sm-bar-label">THIS</span><div class="sm-bar-track"><div class="sm-bar-fill" style="width:' + (cur/maxV*100) + '%;background:var(--info)"></div></div><span class="sm-bar-val">' + comp.expectedMonthConsumption + '</span></div>';
+            html += '<div class="sm-bar-row"><span class="sm-bar-label">PREV</span><div class="sm-bar-track"><div class="sm-bar-fill" style="width:' + (last/maxV*100) + '%;background:var(--warning)"></div></div><span class="sm-bar-val">' + comp.lastMonthconsumption + '</span></div>';
+            html += '<div class="sm-bar-row"><span class="sm-bar-label">YR AGO</span><div class="sm-bar-track"><div class="sm-bar-fill" style="width:' + (yr/maxV*100) + '%;background:var(--text-muted)"></div></div><span class="sm-bar-val">' + comp.lastYearconsumption + '</span></div>';
+            html += '</div>';
+        }
+
+        /* ── Daily consumption mini chart ── */
+        var daily = sm.consumptionMonthlyList || [];
+        if (daily.length > 0) {
+            daily.sort(function(a,b) { return (a.date||a.consumptionDate||'').localeCompare(b.date||b.consumptionDate||''); });
+            var maxD = 1;
+            for (var i = 0; i < daily.length; i++) {
+                var v = parseFloat(daily[i].consumptionAtDate || daily[i].consumptionQuntity) || 0;
+                if (v > maxD) maxD = v;
+            }
+            html += '<div class="sm-chart-mini">';
+            for (var j = 0; j < daily.length; j++) {
+                var dDate = daily[j].date || daily[j].consumptionDate || '';
+                var dVal = daily[j].consumptionAtDate || daily[j].consumptionQuntity || '0';
+                var dv = parseFloat(dVal) || 0;
+                var pct = (dv / maxD * 100);
+                html += '<div class="sm-chart-bar" style="height:' + pct + '%" title="' + dDate + ': ' + dVal + ' kWh"></div>';
+            }
+            html += '</div>';
+            var firstDate = (daily[0].date || daily[0].consumptionDate || '').slice(5);
+            var lastDate = (daily[daily.length-1].date || daily[daily.length-1].consumptionDate || '').slice(5);
+            html += '<div style="display:flex;justify-content:space-between;margin-top:3px;font-family:var(--mono);font-size:0.5rem;color:var(--text-muted)"><span>' + firstDate + '</span><span>DAILY kWh</span><span>' + lastDate + '</span></div>';
+        }
+
+        /* ── Meter readings ── */
+        html += '<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border-subtle)">';
+        html += '<div class="sm-reading"><span class="sm-reading-label">LAST BILL</span><span class="sm-reading-val">' + lastReading + '</span></div>';
+        html += '<div class="sm-reading"><span class="sm-reading-label">CURRENT</span><span class="sm-reading-val">' + curReading + '</span></div>';
+        html += '</div>';
+
+        body.innerHTML = html;
+    }
+
+    /* ── Load smart meter — calls provider directly from browser ── */
+    function loadSmartMeter(fileNumber) {
+        var body = document.getElementById('sm-body');
+        var tag = document.getElementById('sm-tag');
+        if (!body || !fileNumber) {
+            if (body) body.innerHTML = '<div class="sm-loader-wrap"><div class="sm-loader-text" style="color:var(--text-muted)">أدخل رقم الملف في المحادثة لعرض بيانات العداد</div></div>';
+            return;
+        }
 
         /* Show loading animation */
         body.innerHTML = '<div class="sm-loader-wrap"><div class="sm-loader-bars"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><div class="sm-loader-text">جاري تحميل بيانات العداد...</div></div>';
         tag.innerHTML = '';
 
-        var url = '/nawwar/api/jepco/account-summary/';
-        if (fileNumber) url += '?file_number=' + encodeURIComponent(fileNumber);
-
-        fetch(url)
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            var sm = data.smartMeter;
-            if (!sm || !sm.showSmartMeterFeature) {
-                body.innerHTML = '<div class="sm-loader-wrap"><div class="sm-loader-text" style="color:var(--text-muted)">أدخل رقم الملف في المحادثة لعرض بيانات العداد</div></div>';
-                tag.innerHTML = '';
-                return;
-            }
-
-            tag.innerHTML = data.is_demo
-                ? '<span class="sm-demo-tag">DEMO</span>'
-                : '<span class="sm-live-tag">LIVE</span>';
-
-            /* Update tariff based on expected consumption */
-            var expKwh = parseFloat(sm.expectedElectricityConsumptionQuntity) || 0;
-            updateTariff(expKwh);
-
-            var currentKwh = sm.currentElectricityConsumptionQuntity || '0';
-            var expectedKwh = sm.expectedElectricityConsumptionQuntity || '0';
-            var currentBill = sm.expectedElectricityCurrentBillAmount || '0';
-            var endBill = sm.expectedElectricityEndofMonthBillAmount || '0';
-            var days = sm.numberOfConsumptionDaysSinceLastRead || '0';
-            var lastReading = sm.lastBillReading || '--';
-            var curReading = sm.currentReading || '--';
-            var comp = sm.comparazinConsumption || {};
-
-            /* ── Subscriber info card ── */
-            var sub = data.subscriber;
-            var html = '';
-            if (sub && sub.name) {
-                html += '<div style="padding:6px 0 8px;border-bottom:1px solid var(--border-subtle);margin-bottom:8px">';
-                html += '<div style="font-size:0.75rem;font-weight:600;color:var(--text-heading)">' + esc(sub.name) + '</div>';
-                html += '<div style="font-family:var(--mono);font-size:0.6rem;color:var(--text-muted);margin-top:2px">';
-                html += esc(sub.subscriptionType || '') + ' \u00B7 ' + esc(sub.office || '');
-                html += '</div>';
-                if (sub.meterNumber) {
-                    html += '<div style="font-family:var(--mono);font-size:0.55rem;color:var(--text-muted);margin-top:1px">METER: ' + esc(sub.meterNumber) + ' (' + esc(sub.meterType || '') + ')</div>';
-                }
-                var bal = parseFloat(sub.balance) || 0;
-                html += '<div style="font-size:0.6rem;margin-top:2px;color:' + (bal > 0 ? 'var(--danger)' : 'var(--success)') + '">';
-                html += bal > 0 ? ('\u25CF ' + sub.balance + ' JOD DUE') : '\u25CF لا يوجد مبالغ مستحقة';
-                html += '</div></div>';
-            }
-
-            /* ── Main stats ── */
-            html += '<div class="sm-grid">';
-            html += '<div class="sm-cell"><div class="sm-val">' + currentBill + '</div><div class="sm-lbl">JOD BILL EST.</div></div>';
-            html += '<div class="sm-cell"><div class="sm-val">' + currentKwh + '</div><div class="sm-lbl">kWh (' + days + ' DAY)</div></div>';
-            html += '<div class="sm-cell"><div class="sm-val" style="color:var(--warning)">' + endBill + '</div><div class="sm-lbl">JOD END-MONTH</div></div>';
-            html += '<div class="sm-cell"><div class="sm-val" style="color:var(--info)">' + expectedKwh + '</div><div class="sm-lbl">kWh PROJECTED</div></div>';
-            html += '</div>';
-
-            /* ── Consumption comparison bars ── */
-            if (comp.expectedMonthConsumption) {
-                var cur = parseFloat(comp.expectedMonthConsumption) || 1;
-                var last = parseFloat(comp.lastMonthconsumption) || 0;
-                var yr = parseFloat(comp.lastYearconsumption) || 0;
-                var maxV = Math.max(cur, last, yr);
-
-                html += '<div class="sm-bar-wrap">';
-                html += '<div class="sm-bar-row"><span class="sm-bar-label">THIS</span><div class="sm-bar-track"><div class="sm-bar-fill" style="width:' + (cur/maxV*100) + '%;background:var(--info)"></div></div><span class="sm-bar-val">' + comp.expectedMonthConsumption + '</span></div>';
-                html += '<div class="sm-bar-row"><span class="sm-bar-label">PREV</span><div class="sm-bar-track"><div class="sm-bar-fill" style="width:' + (last/maxV*100) + '%;background:var(--warning)"></div></div><span class="sm-bar-val">' + comp.lastMonthconsumption + '</span></div>';
-                html += '<div class="sm-bar-row"><span class="sm-bar-label">YR AGO</span><div class="sm-bar-track"><div class="sm-bar-fill" style="width:' + (yr/maxV*100) + '%;background:var(--text-muted)"></div></div><span class="sm-bar-val">' + comp.lastYearconsumption + '</span></div>';
-                html += '</div>';
-            }
-
-            /* ── Daily consumption mini chart ── */
-            var daily = sm.consumptionMonthlyList || [];
-            if (daily.length > 0) {
-                // Sort by date ascending
-                daily.sort(function(a,b) { return (a.date||a.consumptionDate||'').localeCompare(b.date||b.consumptionDate||''); });
-                var maxD = 1;
-                for (var i = 0; i < daily.length; i++) {
-                    var v = parseFloat(daily[i].consumptionAtDate || daily[i].consumptionQuntity) || 0;
-                    if (v > maxD) maxD = v;
-                }
-                html += '<div class="sm-chart-mini">';
-                for (var j = 0; j < daily.length; j++) {
-                    var dDate = daily[j].date || daily[j].consumptionDate || '';
-                    var dVal = daily[j].consumptionAtDate || daily[j].consumptionQuntity || '0';
-                    var dv = parseFloat(dVal) || 0;
-                    var pct = (dv / maxD * 100);
-                    html += '<div class="sm-chart-bar" style="height:' + pct + '%" title="' + dDate + ': ' + dVal + ' kWh"></div>';
-                }
-                html += '</div>';
-                var firstDate = (daily[0].date || daily[0].consumptionDate || '').slice(5);
-                var lastDate = (daily[daily.length-1].date || daily[daily.length-1].consumptionDate || '').slice(5);
-                html += '<div style="display:flex;justify-content:space-between;margin-top:3px;font-family:var(--mono);font-size:0.5rem;color:var(--text-muted)"><span>' + firstDate + '</span><span>DAILY kWh</span><span>' + lastDate + '</span></div>';
-            }
-
-            /* ── Meter readings ── */
-            html += '<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border-subtle)">';
-            html += '<div class="sm-reading"><span class="sm-reading-label">LAST BILL</span><span class="sm-reading-val">' + lastReading + '</span></div>';
-            html += '<div class="sm-reading"><span class="sm-reading-label">CURRENT</span><span class="sm-reading-val">' + curReading + '</span></div>';
-            html += '</div>';
-
-            body.innerHTML = html;
+        /* Call provider directly from the user's browser (bypasses server geo-blocking) */
+        jepcoFetchSmartMeter(fileNumber)
+        .then(function(sm) {
+            renderSmartMeterData(fileNumber, sm, null);
         })
-        .catch(function(err) {
-            body.innerHTML = '<div class="sm-loader-wrap"><div class="sm-loader-text" style="color:var(--warning)">فشل تحميل البيانات</div></div>';
+        .catch(function() {
+            body.innerHTML = '<div class="sm-loader-wrap"><div class="sm-loader-text" style="color:var(--warning)">فشل تحميل البيانات — تأكد من اتصالك</div></div>';
             tag.innerHTML = '';
         });
     }
@@ -858,7 +1136,16 @@
     msgs.scrollTop = msgs.scrollHeight;
 
     /* Initial load — use stored file number if available */
-    loadSmartMeter(lastFileNumber || undefined);
+    if (lastFileNumber) loadSmartMeter(lastFileNumber);
+
+    /* ── Mobile sidebar toggle ── */
+    var sidebarToggle = document.getElementById('mobile-sidebar-toggle');
+    var sidebar = document.querySelector('.app-sidebar');
+    if (sidebarToggle && sidebar) {
+        sidebarToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('mobile-open');
+        });
+    }
 })();
 </script>
 {% endblock %}

@@ -60,6 +60,9 @@ class Command(BaseCommand):
         count = 0
         for sector, tiers in settings.EMRC_TARIFFS.items():
             for tier_data in tiers:
+                # Skip time-of-use entries that lack min/max_kwh
+                if 'min_kwh' not in tier_data or 'max_kwh' not in tier_data:
+                    continue
                 _, created = TariffTier.objects.update_or_create(
                     sector=sector.lower(),
                     tier_number=tier_data['tier'],

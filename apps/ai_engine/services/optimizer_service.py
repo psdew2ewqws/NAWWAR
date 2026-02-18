@@ -225,7 +225,7 @@ class SavingsOptimizer:
         prompt = SAVINGS_PROMPT.format(
             consumption_kwh=consumption_profile.get('avg_monthly_kwh', 0),
             current_tier=consumption_profile.get('current_tier', 1),
-            total_amount_fils=consumption_profile.get('avg_amount_fils', 0),
+            total_amount_jod=consumption_profile.get('avg_amount_fils', 0) / 1000,
             context=context,
         )
 
@@ -285,7 +285,7 @@ class SavingsOptimizer:
     def _determine_tier(self, *, kwh: float, sector: str) -> int:
         """Determine the highest tariff tier reached for given consumption."""
         sector_key = sector.upper()
-        tiers = self.emrc_tariffs.get(sector_key, self.emrc_tariffs['RESIDENTIAL'])
+        tiers = self.emrc_tariffs.get(sector_key, self.emrc_tariffs['RESIDENTIAL_SUBSIDIZED'])
 
         current_tier = 1
         for tier in tiers:
@@ -296,7 +296,7 @@ class SavingsOptimizer:
 
     def _calculate_tiered_cost(self, *, kwh: float, sector: str) -> float:
         """Calculate the total cost using tiered tariff rates."""
-        tiers = self.emrc_tariffs.get(sector, self.emrc_tariffs['RESIDENTIAL'])
+        tiers = self.emrc_tariffs.get(sector, self.emrc_tariffs['RESIDENTIAL_SUBSIDIZED'])
         remaining = kwh
         total_cost = 0.0
 
@@ -333,7 +333,7 @@ class SavingsOptimizer:
                 'title': 'Shift appliances to off-peak hours',
                 'title_ar': 'نقل تشغيل الأجهزة لساعات خارج الذروة',
                 'description': f'Move washing, dishwasher, and water heater usage to off-peak hours. Potential saving: {tou_savings_fils} fils/month.',
-                'description_ar': f'انقل تشغيل الغسالة وسخان الماء إلى ساعات خارج الذروة. التوفير المتوقع: {tou_savings_fils} فلس/شهر.',
+                'description_ar': f'انقل تشغيل الغسالة وسخان الماء إلى ساعات خارج الذروة. التوفير المتوقع: {tou_savings_fils/1000:.3f} دينار/شهر.',
                 'potential_savings_fils': tou_savings_fils,
             })
 
@@ -344,7 +344,7 @@ class SavingsOptimizer:
                 'title': 'Reduce consumption to reach a lower tier',
                 'title_ar': 'تخفيض الاستهلاك للوصول إلى شريحة أقل',
                 'description': f'Reducing consumption by 15% could save {tier_savings_fils} fils/month by moving to a lower tariff tier.',
-                'description_ar': f'تخفيض الاستهلاك بنسبة ١٥٪ يوفر {tier_savings_fils} فلس/شهر بالانتقال لشريحة أقل.',
+                'description_ar': f'تخفيض الاستهلاك بنسبة ١٥٪ يوفر {tier_savings_fils/1000:.3f} دينار/شهر بالانتقال لشريحة أقل.',
                 'potential_savings_fils': tier_savings_fils,
             })
 

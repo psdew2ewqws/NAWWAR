@@ -41,6 +41,9 @@ if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
     }
+    # Supabase (and most hosted PG) requires SSL
+    DATABASES['default'].setdefault('OPTIONS', {})
+    DATABASES['default']['OPTIONS']['sslmode'] = 'require'
 elif USE_SQLITE:
     DATABASES = {
         'default': {

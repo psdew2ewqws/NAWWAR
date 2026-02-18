@@ -276,10 +276,21 @@ async def api_chat(request):
                 session=session, role='user', content=message,
             )
 
+        # Accept client-provided JEPCO data (browser calls JEPCO directly
+        # to bypass geo-blocking on the Railway server)
+        jepco_data = body.get('jepco_data')
+
+        # Build session context for conversation flow (appliance analysis, etc.)
+        session_ctx = {}
+        if session and session.context:
+            session_ctx = session.context
+
         from apps.ai_engine.services.llm_service import LLMService
         svc = LLMService()
         result = await svc.route_request(
             message_type='text', content=message, file_number=file_number,
+            jepco_data=jepco_data,
+            session_context=session_ctx,
         )
 
         response = {
@@ -294,6 +305,17 @@ async def api_chat(request):
         if result['metadata'].get('subscriber'):
             response['subscriber'] = result['metadata']['subscriber']
 
+        # TTS: synthesize voice reply (non-blocking, non-fatal)
+        if body.get('tts', False):
+            try:
+                from apps.ai_engine.services.voice_service import VoiceService
+                voice_svc = VoiceService()
+                audio_bytes = await voice_svc.synthesize(text=result['response_text'])
+                if audio_bytes:
+                    response['audio_b64'] = base64.b64encode(audio_bytes).decode('utf-8')
+            except Exception as tts_err:
+                logger.warning("TTS synthesis failed (non-fatal): %s", tts_err)
+
         # Save assistant message and persist file_number in session context
         if session:
             from asgiref.sync import sync_to_async
@@ -302,9 +324,22 @@ async def api_chat(request):
                 processing_time_ms=result['metadata'].get('processing_ms', 0),
             )
             returned_file = result['metadata'].get('file_number')
-            if returned_file:
+            if returned_file or result['metadata'].get('awaiting'):
                 ctx = session.context or {}
-                ctx['file_number'] = returned_file
+                if returned_file:
+                    ctx['file_number'] = returned_file
+                # Persist conversation flow state
+                awaiting = result['metadata'].get('awaiting')
+                if awaiting:
+                    ctx['awaiting'] = awaiting
+                else:
+                    ctx.pop('awaiting', None)
+                if result['metadata'].get('appliances'):
+                    ctx['appliances'] = result['metadata']['appliances']
+                if result['metadata'].get('expected_kwh'):
+                    ctx['expected_kwh'] = result['metadata']['expected_kwh']
+                if result['metadata'].get('projected_kwh'):
+                    ctx['projected_kwh'] = result['metadata']['projected_kwh']
                 session.context = ctx
                 await sync_to_async(session.save)(update_fields=['context'])
 
@@ -393,51 +428,37 @@ async def api_chat_voice(request):
 # ─── JEPCO API Endpoints ──────────────────────────────────────────────────────
 
 async def api_jepco_customer(request):
-    """Get JEPCO customer info for the configured account."""
-    from apps.consumer.clients.jepco_client import JEPCOClient
-    client = JEPCOClient()
-    data = await client.get_customer_info()
-    return JsonResponse(data)
+    """Get JEPCO customer info — requires authenticated endpoint (not available)."""
+    return JsonResponse({'error': 'Endpoint requires JEPCO authentication'}, status=501)
 
 
 async def api_jepco_bills(request, file_number):
-    """Get bills for a subscription file number."""
-    from apps.consumer.clients.jepco_client import JEPCOClient
-    client = JEPCOClient()
-    data = await client.get_bills(file_number)
-    return JsonResponse(data)
+    """Get bills — requires authenticated endpoint (not available)."""
+    return JsonResponse({'error': 'Endpoint requires JEPCO authentication'}, status=501)
 
 
 async def api_jepco_complaints(request):
-    """Get complaints for the configured account."""
-    from apps.consumer.clients.jepco_client import JEPCOClient
-    client = JEPCOClient()
-    data = await client.get_complaints()
-    return JsonResponse(data)
+    """Get complaints — requires authenticated endpoint (not available)."""
+    return JsonResponse({'error': 'Endpoint requires JEPCO authentication'}, status=501)
 
 
 async def api_jepco_provinces(request):
-    """Get JEPCO coverage provinces."""
-    from apps.consumer.clients.jepco_client import JEPCOClient
-    client = JEPCOClient()
-    data = await client.get_provinces()
-    return JsonResponse(data)
+    """Get JEPCO coverage provinces — requires authenticated endpoint (not available)."""
+    return JsonResponse({'error': 'Endpoint requires JEPCO authentication'}, status=501)
 
 
 async def api_jepco_verify_meter(request, meter_number):
-    """Validate a meter number against JEPCO SAP."""
-    from apps.consumer.clients.jepco_client import JEPCOClient
-    client = JEPCOClient()
-    data = await client.check_meter_number(meter_number)
-    return JsonResponse(data)
+    """Validate meter — requires authenticated endpoint (not available)."""
+    return JsonResponse({'error': 'Endpoint requires JEPCO authentication'}, status=501)
 
 
 async def api_jepco_smart_meter(request, file_number):
-    """Get real-time smart meter dashboard data from JEPCO."""
-    from apps.consumer.clients.jepco_client import JEPCOClient
-    client = JEPCOClient()
-    data = await client.get_smart_meter_dashboard(file_number)
-    return JsonResponse(data)
+    """Get real-time smart meter dashboard data from JEPCO (no auth needed)."""
+    from apps.consumer.clients.jepco_client import fetch_smart_meter
+    data = await fetch_smart_meter(file_number)
+    if data:
+        return JsonResponse({'statusCode': 'Success', 'body': data})
+    return JsonResponse({'error': 'Smart meter data not available'}, status=404)
 
 
 async def api_jepco_analyze(request, file_number):
@@ -447,9 +468,9 @@ async def api_jepco_analyze(request, file_number):
     No auth needed — calls JEPCO's unauthenticated SmartMeterDashboard,
     then feeds the data to Claude for personalized analysis.
     """
-    from apps.consumer.clients.jepco_client import fetch_smart_meter_public
+    from apps.consumer.clients.jepco_client import fetch_smart_meter
 
-    smart_data = await fetch_smart_meter_public(file_number)
+    smart_data = await fetch_smart_meter(file_number)
     if not smart_data or not smart_data.get('showSmartMeterFeature'):
         return JsonResponse({
             'error': 'Smart meter data not available for this file number',
@@ -476,16 +497,14 @@ async def api_jepco_account_summary(request):
     """
     Combined account summary — smart meter + SAP subscriber info.
 
-    Accepts optional ?file_number= query param, falls back to configured default.
-    Fetches smart meter (unauthenticated) + SAP lookup (authenticated) concurrently.
+    The frontend now calls JEPCO directly from the user's browser (bypasses
+    server-side geo-blocking). This endpoint is kept as a fallback for
+    environments where JEPCO is reachable from the server.
     """
     import asyncio
     from django.conf import settings
-    from apps.consumer.clients.jepco_client import (
-        fetch_smart_meter_public, fetch_sap_lookup,
-    )
+    from apps.consumer.clients.jepco_client import fetch_smart_meter
 
-    # Allow file number from query param or use configured default
     file_number = request.GET.get('file_number', '')
     if not file_number:
         config = getattr(settings, 'JEPCO_CONFIG', {})
@@ -496,40 +515,13 @@ async def api_jepco_account_summary(request):
             'error': 'No file number provided',
             'smartMeter': None,
             'subscriber': None,
-            'is_demo': True,
         })
 
-    # Fetch smart meter + SAP subscriber info concurrently
-    smart_task = fetch_smart_meter_public(file_number)
-    sap_task = fetch_sap_lookup(file_number)
-    smart_data, sap_data = await asyncio.gather(
-        smart_task, sap_task, return_exceptions=True,
-    )
-
-    if isinstance(smart_data, Exception):
-        smart_data = None
-    if isinstance(sap_data, Exception):
-        sap_data = None
-
-    # Build subscriber summary from SAP data
-    subscriber = None
-    if sap_data and isinstance(sap_data, dict):
-        subscriber = {
-            'name': sap_data.get('firstName', ''),
-            'fileNumber': sap_data.get('fileNumber', file_number),
-            'meterNumber': sap_data.get('meterNumber', ''),
-            'meterType': sap_data.get('deviceCategoryAdditionalType', ''),
-            'subscriptionType': sap_data.get('subscriptionDescription', ''),
-            'subscriptionCode': sap_data.get('subscriptionCode', ''),
-            'office': sap_data.get('officeDescription', ''),
-            'balance': sap_data.get('receivableAmount', '0'),
-            'subsidyFlag': sap_data.get('subsidy_Flag', ''),
-            'rateGroup': sap_data.get('rateFactorGroup', ''),
-        }
+    # Fetch smart meter data (no auth needed)
+    smart_data = await fetch_smart_meter(file_number)
 
     return JsonResponse({
         'smartMeter': smart_data if smart_data else None,
-        'subscriber': subscriber,
+        'subscriber': None,
         'fileNumber': file_number,
-        'is_demo': not bool(smart_data),
     })

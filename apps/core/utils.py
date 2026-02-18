@@ -155,6 +155,24 @@ _INJECTION_PATTERNS = [
     re.compile(r'اكشف\s+(عن\s+)?تعليمات', re.IGNORECASE),
     re.compile(r'أنت\s+الآن\b', re.IGNORECASE),
     re.compile(r'غير\s+دورك', re.IGNORECASE),
+    # Additional English patterns
+    re.compile(r'forget\s+(everything|all|previous)', re.IGNORECASE),
+    re.compile(r'new\s+instructions?', re.IGNORECASE),
+    re.compile(r'override\s+(your\s+)?rules?', re.IGNORECASE),
+    re.compile(r'pretend\s+(you|to)\s+', re.IGNORECASE),
+    re.compile(r'role\s*play', re.IGNORECASE),
+    re.compile(r'jailbreak', re.IGNORECASE),
+    re.compile(r'DAN\s+mode', re.IGNORECASE),
+    re.compile(r'developer\s+mode', re.IGNORECASE),
+    re.compile(r'(print|output|show)\s+(your\s+)?(system|initial)\s+(prompt|instructions?)', re.IGNORECASE),
+    re.compile(r'what\s+are\s+your\s+(instructions?|rules?|system\s+prompt)', re.IGNORECASE),
+    # Additional Arabic patterns
+    re.compile(r'انسَ?\s+(كل|جميع)', re.IGNORECASE),
+    re.compile(r'تعليمات\s+جديدة', re.IGNORECASE),
+    re.compile(r'تخطى\s+(القواعد|التعليمات)', re.IGNORECASE),
+    re.compile(r'تظاهر\s+(أنك|بأنك|انك)', re.IGNORECASE),
+    re.compile(r'ما\s+هي\s+تعليماتك', re.IGNORECASE),
+    re.compile(r'اعرض\s+(تعليمات|أوامر)\s+النظام', re.IGNORECASE),
 ]
 
 INJECTION_SAFE_RESPONSE = (
@@ -164,16 +182,41 @@ INJECTION_SAFE_RESPONSE = (
 )
 
 
+_ZERO_WIDTH_RE = re.compile(r'[\u200b\u200c\u200d\ufeff\u200e\u200f]')
+
+
 def check_prompt_injection(text: str) -> str | None:
     """
     Screen user input for prompt injection patterns.
 
     Returns the matched pattern string if injection detected, None otherwise.
+    Normalises Unicode before matching to prevent bypass via
+    zero-width characters, Arabic diacritics, or extra whitespace.
     """
     if not text:
         return None
+    # Strip zero-width / invisible characters
+    normalised = _ZERO_WIDTH_RE.sub('', text)
+    # Remove Arabic diacritics (tashkeel) so patterns match bare letters
+    normalised = ''.join(
+        c for c in unicodedata.normalize('NFD', normalised)
+        if unicodedata.category(c) != 'Mn'
+    )
+    # Collapse multiple spaces into one
+    normalised = re.sub(r'\s+', ' ', normalised)
     for pattern in _INJECTION_PATTERNS:
-        match = pattern.search(text)
+        match = pattern.search(normalised)
         if match:
             return match.group(0)
     return None
+
+
+def check_indirect_injection(data: Any) -> bool:
+    """Screen external API data for injection hidden in field values."""
+    if isinstance(data, str):
+        return check_prompt_injection(data) is not None
+    if isinstance(data, dict):
+        return any(check_indirect_injection(v) for v in data.values())
+    if isinstance(data, list):
+        return any(check_indirect_injection(item) for item in data[:50])
+    return False

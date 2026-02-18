@@ -153,8 +153,8 @@ core ───────────┼─── consumer ───┐
 ### Flow 1: Consumer Bill Scan via WhatsApp
 
 ```
-Consumer                WhatsApp         Nawwar                   GPT-4o        JEPCO API
-   │                      API            Server                   Vision
+Consumer                WhatsApp         Nawwar                   GPT-4o       Smart Meter
+   │                      API            Server                   Vision          API
    │                       │               │                        │              │
    │  Send bill photo      │               │                        │              │
    │──────────────────────▶│               │                        │              │
@@ -238,7 +238,7 @@ Plant Simulator     SensorReading DB     Anomaly Detector     MaintenancePredict
 ### Flow 4: Demand Forecasting
 
 ```
-JEPCO Consumer      OpenWeather       DemandForecaster      Generation
+Consumer            OpenWeather       DemandForecaster      Generation
 Demand (Real)        API (Real)       (Ridge Regression)     Schedule
      │                  │                    │                    │
      │  Historical      │                    │                    │
@@ -298,7 +298,7 @@ Demand (Real)        API (Real)       (Ridge Regression)     Schedule
 │  │                                                           │    │
 │  │  Documents:                                               │    │
 │  │  • CEGCO Intelligence Report                              │    │
-│  │  • JEPCO API Documentation                                │    │
+│  │  • Distribution API Documentation                          │    │
 │  │  • Jordan Energy Sector Analysis                          │    │
 │  │  • EMRC Tariff Regulations                                │    │
 │  │  • NEPCO Annual Reports                                   │    │
@@ -444,25 +444,17 @@ Complex intents (billing, savings, operations) may trigger **CrewAI multi-agent 
 
 ## External Integrations
 
-### JEPCO API (Real Data)
+### Smart Meter Integration (Real Data)
 
 ```
 ┌────────────────────────────────────────────┐
-│           JEPCO API Ecosystem              │
+│       Distribution Company Integration     │
 │                                            │
-│  Server 1: api.jepco.com.jo               │
-│  Server 2: eservices.jepco.com.jo         │
-│  Server 3: eapps.jepco.com.jo             │
+│  • Real-time smart meter consumption       │
+│  • Daily kWh readings per subscriber       │
+│  • Bill projections and comparisons        │
+│  • Historical usage patterns               │
 │                                            │
-│  97+ Endpoints:                            │
-│  • Consumer subscriptions & billing        │
-│  • Meter readings & validation             │
-│  • Complaint management                    │
-│  • E-Services (79 endpoints)               │
-│  • 95 data models mapped                   │
-│                                            │
-│  Integration: JEPCOService (service layer) │
-│  Auth: Session-based (credentials needed)  │
 └────────────────────────────────────────────┘
 ```
 

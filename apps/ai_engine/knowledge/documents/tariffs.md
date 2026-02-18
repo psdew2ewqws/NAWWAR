@@ -1,123 +1,231 @@
-# EMRC Electricity Tariff Schedule — Jordan
-# جدول تعرفة الكهرباء — هيئة تنظيم قطاع الطاقة والمعادن
+# جدول تعرفة الكهرباء في الأردن — ساري من 1/7/2024
+# Jordan Electricity Tariff Schedule — Effective July 1, 2024
 
-> **Source / المصدر**: Energy and Minerals Regulatory Commission (EMRC)
-> هيئة تنظيم قطاع الطاقة والمعادن
+> **المصدر / Source**: هيئة تنظيم قطاع الطاقة والمعادن (EMRC) + شركة الكهرباء الأردنية (JEPCO)
+> تعرفة جديدة مبسّطة اعتُمدت بتاريخ 1 تموز 2024
+> New simplified tariff adopted July 1, 2024
 
 ---
 
-## 1. Residential Tariff / التعرفة المنزلية
+## 1. التعرفة السكنية المدعومة / Subsidized Residential Tariff
 
-The residential tariff uses an **Increasing Block Tariff (IBT)** structure
-with 7 tiers based on monthly consumption.
+التعرفة المدعومة تطبّق على المواطنين الأردنيين وحاملي جوازات السفر المؤقتة وسكان قطاع غزة المقيمين في الأردن.
+يجب التسجيل على منصة kahraba.gov.jo للاستفادة من الدعم.
 
-تستخدم التعرفة المنزلية نظام **الشرائح التصاعدية** المكون من ٧ شرائح
-حسب الاستهلاك الشهري.
+The subsidized tariff applies to Jordanian citizens, temporary passport holders, and Gaza Strip residents living in Jordan.
+Registration at kahraba.gov.jo is required for subsidy eligibility.
 
-| Tier / الشريحة | Range (kWh) / المدى | Rate (fils/kWh) / السعر | Rate (JOD/kWh) |
+| الشريحة / Tier | المدى (كيلوواط ساعة/شهر) / Range | السعر (فلس/كوس) / Rate (fils/kWh) | السعر (دينار/كوس) / Rate (JOD/kWh) |
 |:-:|:--|:-:|:-:|
-| 1 | 1 – 160 | 33 | 0.033 |
-| 2 | 161 – 300 | 72 | 0.072 |
-| 3 | 301 – 500 | 86 | 0.086 |
-| 4 | 501 – 600 | 114 | 0.114 |
-| 5 | 601 – 750 | 158 | 0.158 |
-| 6 | 751 – 1000 | 188 | 0.188 |
-| 7 | 1001+ | 265 | 0.265 |
+| 1 | 1 – 300 | 50 | 0.050 |
+| 2 | 301 – 600 | 100 | 0.100 |
+| 3 | أكثر من 600 / Above 600 | 200 | 0.200 |
 
-### Calculation Example / مثال حسابي
+### الدعم المباشر / Direct Subsidy (خصم تلقائي على الفاتورة)
+- استهلاك 51–200 كيلوواط ساعة/شهر: خصم **2.5 دينار** من الفاتورة
+- استهلاك 201–600 كيلوواط ساعة/شهر: خصم **2.0 دينار** من الفاتورة
+- Consumption 51–200 kWh/month: **JD 2.5** deducted from bill
+- Consumption 201–600 kWh/month: **JD 2.0** deducted from bill
 
-**For 450 kWh consumption / لاستهلاك ٤٥٠ كيلوواط ساعة:**
+### من يستفيد من التعرفة المدعومة؟ / Who qualifies?
+- المواطنون الأردنيون / Jordanian citizens
+- حاملو جوازات السفر المؤقتة / Temporary passport holders
+- سكان قطاع غزة المقيمون في الأردن / Gaza Strip residents in Jordan
+- يجب التسجيل على kahraba.gov.jo / Must register at kahraba.gov.jo
 
-| Tier | kWh | Rate (fils) | Cost (fils) | Cost (JOD) |
-|:-:|:-:|:-:|:-:|:-:|
-| 1 | 160 | 33 | 5,280 | 5.280 |
-| 2 | 140 | 72 | 10,080 | 10.080 |
-| 3 | 150 | 86 | 12,900 | 12.900 |
-| **Total** | **450** | — | **28,260** | **28.260** |
-
-**Blended rate / المعدل المختلط**: 62.8 fils/kWh
-
-### ملاحظات / Notes
-
-- الشريحة الأولى (حتى ١٦٠ كيلوواط ساعة) مدعومة لحماية الأسر ذات الدخل المحدود.
-- Tier 1 (up to 160 kWh) is subsidized to protect low-income households.
-- المعدل الأردني لاستهلاك الأسرة: حوالي ٢٥٠ كيلوواط ساعة/شهر (الشريحتان ١ و٢).
-- Average Jordanian household consumption: ~250 kWh/month (Tiers 1-2).
+### من لا يستفيد من الدعم؟ / Who does NOT qualify?
+- غير الأردنيين / Non-Jordanians
+- أصحاب أكثر من عداد واحد (يُدعم عداد واحد فقط) / Multiple meter owners (only one subsidized)
+- المنازل غير المسكونة (استهلاك أقل من 50 كوس لـ 3 أشهر متتالية) / Uninhabited homes (<50 kWh for 3 consecutive months)
+- أصحاب أنظمة الطاقة المتجددة (مع استثناءات) / Renewable energy system owners (with exceptions)
 
 ---
 
-## 2. Commercial Tariff / التعرفة التجارية
+## 2. التعرفة السكنية غير المدعومة / Unsubsidized Residential Tariff
 
-| Category / الفئة | Rate (fils/kWh) / السعر | Notes / ملاحظات |
-|:--|:-:|:--|
-| Commercial / تجاري | 115 | Flat rate for all consumption / سعر موحد |
+تطبّق على غير المؤهلين للدعم.
+Applies to those not eligible for the subsidy.
+
+| الشريحة / Tier | المدى (كيلوواط ساعة/شهر) / Range | السعر (فلس/كوس) / Rate (fils/kWh) | السعر (دينار/كوس) / Rate (JOD/kWh) |
+|:-:|:--|:-:|:-:|
+| 1 | 1 – 1,000 | 120 | 0.120 |
+| 2 | أكثر من 1,000 / Above 1,000 | 150 | 0.150 |
+
+---
+
+## 3. مثال حسابي — فاتورة سكنية مدعومة / Subsidized Bill Example
+
+**لاستهلاك 450 كيلوواط ساعة في الشهر / For 450 kWh monthly consumption:**
+
+| الشريحة | كيلوواط ساعة | السعر (فلس) | التكلفة (فلس) | التكلفة (دينار) |
+|:-:|:-:|:-:|:-:|:-:|
+| 1 | 300 | 50 | 15,000 | 15.000 |
+| 2 | 150 | 100 | 15,000 | 15.000 |
+| **الإجمالي** | **450** | — | **30,000** | **30.000** |
+
+- خصم الدعم المباشر (201–600 كوس): −2.000 دينار
+- رسوم الطاقة بعد الدعم: 28.000 دينار
+- ضريبة بلدية 10%: +2.800 دينار
+- رسم خدمة (الحد الأدنى الشهري): +1.750 دينار
+- بدل وقود (متغير فصلياً): +متغير
+- **الإجمالي التقريبي**: حوالي 32.550 دينار + بدل الوقود
+
+**المعدل المختلط / Blended rate**: 66.7 fils/kWh (قبل الرسوم)
+
+---
+
+## 4. التعرفة التجارية / Commercial Tariff
+
+| الشريحة / Tier | المدى (كيلوواط ساعة/شهر) / Range | السعر (فلس/كوس) / Rate (fils/kWh) |
+|:-:|:--|:-:|
+| 1 | 1 – 2,000 | 120 |
+| 2 | أكثر من 2,000 / Above 2,000 | 152 |
 
 - تشمل المحلات والمكاتب والمطاعم والفنادق الصغيرة.
 - Covers shops, offices, restaurants, and small hotels.
+- عداد الخدمة التجاري: نفس الأسعار (120/152 فلس).
+- Commercial service meters: same rates (120/152 fils).
 
 ---
 
-## 3. Industrial Tariff / التعرفة الصناعية
+## 5. التعرفة الصناعية / Industrial Tariff
 
-| Category / الفئة | Rate (fils/kWh) / السعر | Notes / ملاحظات |
+### صناعي صغير / Small Industrial
+| الشريحة / Tier | المدى (كيلوواط ساعة/شهر) / Range | السعر (فلس/كوس) / Rate (fils/kWh) |
+|:-:|:--|:-:|
+| 1 | 1 – 10,000 | 60 |
+| 2 | أكثر من 10,000 / Above 10,000 | 68 |
+
+### صناعي متوسط (حسب وقت الاستخدام) / Medium Industrial (Time-of-Use)
+| الفترة / Period | السعر (فلس/كوس) / Rate (fils/kWh) |
+|:--|:-:|
+| ذروة / Peak | 79 |
+| وسطى / Partial Peak | 69 |
+| منخفض / Off-Peak | 59 |
+
+---
+
+## 6. التعرفة الزراعية / Agricultural Tariff
+
+| الفترة / Period | السعر (فلس/كوس) / Rate (fils/kWh) |
+|:--|:-:|
+| نهاري / Daytime | 55 |
+| ليلي / Nighttime | 49 |
+
+- تُطبّق على المزارع والآبار الزراعية المرخّصة.
+- Applies to licensed farms and agricultural wells.
+- تم إلغاء رسم حمل الذروة (كان 2 دينار/كيلوواط/شهر).
+- Peak load charge (JD 2/kW/month) was eliminated.
+- تخفيض 8% مقارنة بالتعرفة السابقة.
+- 8% reduction compared to previous tariff.
+
+---
+
+## 7. تعرفات خاصة / Specialized Tariffs
+
+| القطاع / Sector | السعر (فلس/كوس) / Rate | ملاحظات / Notes |
 |:--|:-:|:--|
-| Industrial / صناعي | 76 | Flat rate / سعر موحد |
-
-- تُطبّق على المصانع والمنشآت الصناعية المرخّصة.
-- Applies to licensed factories and industrial facilities.
-
----
-
-## 4. Time-of-Use Tariff / تعرفة وقت الاستخدام
-
-Available for large commercial and industrial consumers on request.
-متاحة للمستهلكين التجاريين والصناعيين الكبار عند الطلب.
-
-| Period / الفترة | Hours / الساعات | Rate Multiplier / معامل السعر |
-|:--|:--|:-:|
-| Peak / ذروة | 13:00 – 17:00 | ×1.50 |
-| Shoulder / وسطى | 08:00 – 13:00 & 17:00 – 21:00 | ×1.00 |
-| Off-Peak / منخفض | 21:00 – 08:00 | ×0.65 |
-
-### Notes / ملاحظات:
-- فترة الذروة تتراوح بين الساعة ١ ظهراً و٥ عصراً — أعلى طلب على الكهرباء في الأردن.
-- Peak period (1 PM – 5 PM) coincides with highest electricity demand in Jordan.
-- التحول إلى نظام وقت الاستخدام يمكن أن يوفر حتى ٢٠-٣٠٪ للمستهلكين الصناعيين.
-- Switching to ToU can save 20-30% for industrial consumers who can shift load.
+| الفنادق / Hotels | 82 | نهاري وليلي / Day and night |
+| شحن المركبات الكهربائية / EV Charging | 103 – 160 | حسب الفترة والموقع / Varies by time and location |
+| مستشفيات / Hospitals | 140 | تخفيض من 160 / Reduced from 160 |
+| عداد خدمة سكني / Residential Service Meter | 50/100/200 | نفس التعرفة المدعومة / Same as subsidized |
 
 ---
 
-## 5. Additional Fees & Surcharges / الرسوم الإضافية
+## 8. الحد الأدنى للفاتورة الشهرية / Minimum Monthly Charge
 
-| Fee / الرسم | Amount / المبلغ | Description / الوصف |
+| الفئة / Category | المبلغ / Amount |
+|:--|:-:|
+| المشتركون العاديون / Standard consumers | 1.750 دينار / JD 1.750 |
+| فئات أخرى / Other categories | 2.000 دينار / JD 2.000 |
+
+---
+
+## 9. الرسوم الإضافية / Additional Fees & Surcharges
+
+| الرسم / Fee | المبلغ / Amount | الوصف / Description |
 |:--|:--|:--|
-| Fuel Surcharge / بدل وقود | Variable / متغير | Adjusted quarterly based on fuel prices / يعدّل فصلياً حسب أسعار الوقود |
-| Service Fee / رسم خدمة | 500 fils/month | Fixed monthly charge / رسم شهري ثابت |
-| Municipality Tax / ضريبة بلدية | 10% of bill | Applied to total energy charge / تطبق على إجمالي قيمة الطاقة |
-| TV & Radio Fee / رسم تلفزيون وراديو | 250 fils/month | Collected on behalf of public broadcasting / يجبى لصالح الإعلام العام |
-| Reconnection Fee / رسم إعادة توصيل | 5,000 fils | One-time fee after disconnection / رسم لمرة واحدة بعد القطع |
+| بدل وقود / Fuel Surcharge | متغير / Variable | يُعدّل فصلياً حسب أسعار الوقود / Adjusted quarterly |
+| ضريبة بلدية / Municipality Tax | 10% من رسوم الطاقة | تُطبّق على إجمالي قيمة الطاقة / Applied to total energy charge |
+| رسم إعادة توصيل / Reconnection Fee | 5,000 فلس (5 دينار) | لمرة واحدة بعد القطع / One-time after disconnection |
+
+### كيف تُحسب الفاتورة؟ / How is the bill calculated?
+الفاتورة = رسوم الطاقة (حسب الشرائح) − الدعم المباشر + ضريبة البلدية (10%) + الحد الأدنى الشهري + بدل الوقود
+Bill = Energy charges (per tiers) − Direct subsidy + Municipality tax (10%) + Minimum monthly charge + Fuel surcharge
 
 ---
 
-## 6. Renewable Energy Tariffs / تعرفة الطاقة المتجددة
+## 10. مرجع العملة / Currency Reference
 
-| Type / النوع | Capacity / القدرة | Feed-in Rate / سعر التغذية |
-|:--|:--|:--|
-| Rooftop Solar / طاقة شمسية سطحية | Up to 10 kW | Net metering (صافي القياس) |
-| Small Wind / طاقة رياح صغيرة | Up to 5 kW | Net metering |
-| Wheeling / نقل الطاقة | > 1 MW | Negotiated PPA / اتفاقية شراء طاقة |
-
-### Net Metering / صافي القياس
-- الاستهلاك الذاتي أولاً، والفائض يُصدّر للشبكة.
-- Self-consumption first; excess exported to the grid.
-- يتم ترحيل الرصيد شهرياً وتصفيته سنوياً في ديسمبر.
-- Credits are carried monthly and settled annually in December.
+- **1 دينار أردني (JOD)** = 1,000 فلس (fils)
+- **1 JOD** ≈ 1.41 USD (سعر مربوط تقريبي / approximate peg rate)
+- جميع التعرفات بالفلس لكل كيلوواط ساعة / All tariffs in fils per kWh
 
 ---
 
-## 7. Currency Reference / مرجع العملة
+## 11. شرح مفصّل بالعربي — التعرفة السكنية المدعومة
 
-- **1 JOD (دينار أردني)** = 1,000 fils (فلس)
-- **1 JOD** ≈ 1.41 USD (approximate, subject to peg rate)
-- All tariffs are denominated in **fils per kWh** unless stated otherwise.
-- جميع التعرفات مقوّمة بالفلس لكل كيلوواط ساعة ما لم يُذكر غير ذلك.
+التعرفة الجديدة للكهرباء السكنية في الأردن (من 1 تموز 2024) مبسّطة وتتكون من 3 شرائح فقط:
+
+**الشريحة الأولى**: من 1 إلى 300 كيلوواط ساعة — السعر **50 فلس/كيلوواط ساعة** (0.050 دينار)
+هذه الشريحة تغطي معظم الأسر الأردنية ذات الاستهلاك المتوسط.
+
+**الشريحة الثانية**: من 301 إلى 600 كيلوواط ساعة — السعر **100 فلس/كيلوواط ساعة** (0.100 دينار)
+ضعف سعر الشريحة الأولى.
+
+**الشريحة الثالثة**: أكثر من 600 كيلوواط ساعة — السعر **200 فلس/كيلوواط ساعة** (0.200 دينار)
+أربع أضعاف سعر الشريحة الأولى — الاستهلاك المرتفع مكلف جداً.
+
+### نصيحة مهمة للتوفير
+إذا كان استهلاكك 320 كيلوواط ساعة (الشريحة الثانية)، تخفيض 20 كوس فقط يوفّر لك 20 × 100 = 2,000 فلس (2 دينار) شهرياً لأن هذه الكيلوواطات بسعر الشريحة الثانية الأغلى. ركّز على تقليل آخر كيلوواط أولاً — هي دائماً الأغلى.
+
+### التعرفة غير المدعومة
+إذا لم تكن مؤهلاً للدعم (غير أردني، أو لديك أكثر من عداد):
+- من 1 إلى 1,000 كيلوواط ساعة: **120 فلس/كوس**
+- أكثر من 1,000 كيلوواط ساعة: **150 فلس/كوس**
+
+### التعرفة التجارية
+سعر الكهرباء للقطاع التجاري (محلات، مكاتب، مطاعم، فنادق صغيرة):
+- من 1 إلى 2,000 كيلوواط ساعة: **120 فلس/كوس**
+- أكثر من 2,000 كيلوواط ساعة: **152 فلس/كوس**
+
+### التعرفة الزراعية
+تعرفة الكهرباء الزراعية:
+- **نهاري**: 55 فلس/كيلوواط ساعة
+- **ليلي**: 49 فلس/كيلوواط ساعة
+تُطبّق على المزارع والآبار الزراعية المرخّصة. تم إلغاء رسم حمل الذروة.
+
+### التعرفة الصناعية الصغيرة
+- من 1 إلى 10,000 كيلوواط ساعة: **60 فلس/كوس**
+- أكثر من 10,000 كيلوواط ساعة: **68 فلس/كوس**
+
+### الفنادق
+- سعر موحد: **82 فلس/كوس** (نهاري وليلي)
+
+---
+
+## 12. الطاقة المتجددة — النظام الجديد 2024 / Renewable Energy — New 2024 System
+
+تم إلغاء نظام صافي القياس (Net Metering) القديم بموجب نظام رقم 58 لسنة 2024.
+The old Net Metering scheme was discontinued under Bylaw 58 of 2024.
+
+### الآليات الأربع الجديدة للربط مع الشبكة / Four New Grid Connection Mechanisms:
+
+| الآلية / Mechanism | الوصف / Description |
+|:--|:--|
+| نقل الطاقة (Wheeling) | أنظمة شمسية خارج الموقع / Off-site solar PV |
+| صافي الفوترة (Net Billing) | يُشترى الفائض بسعر محدد / Excess bought at fixed rate |
+| صفر تصدير (Zero to Grid) | لا تصدير للشبكة / No grid export |
+| شراء كامل/بيع كامل (Buy-All/Sell-All) | عداد منفصل / Separate metering |
+
+### أسعار شراء الفائض / Export Compensation Rates:
+- سكني / Residential: **50 فلس/كوس** (0.050 دينار/كوس)
+- قطاعات أخرى / Other sectors: **40 فلس/كوس** (0.040 دينار/كوس)
+
+### حدود قدرة النظام السكني / Residential System Size Limits:
+- عداد أحادي الطور / Single-phase: حتى **5.4 كيلوواط ذروة** (kWp)
+- عداد ثلاثي الأطوار / Three-phase: حتى **15 كيلوواط ذروة** (kWp)
+
+### رسم الشبكة / Grid Fee:
+- يُفرض على جميع الآليات ما عدا شراء كامل/بيع كامل.
+- Applies to all mechanisms except Buy-All/Sell-All.

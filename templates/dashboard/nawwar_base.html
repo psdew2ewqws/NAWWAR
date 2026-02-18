@@ -248,9 +248,49 @@
 
         @media (max-width: 768px) {
             .grid-3, .grid-2, .grid-4 { grid-template-columns: 1fr; }
-            .page-container { padding: var(--gap-lg); }
+            .page-container { padding: var(--gap-md); }
             .kpi-row { flex-wrap: wrap; }
             .kpi-item { min-width: calc(50% - var(--gap-sm)); }
+
+            /* ─── Mobile topbar ─── */
+            .topbar {
+                padding: 0 var(--gap-md);
+                gap: var(--gap-sm);
+                height: 48px;
+                overflow-x: hidden;
+            }
+            .topbar-brand {
+                font-size: 0.875rem;
+                gap: var(--gap-xs);
+                flex-shrink: 0;
+            }
+            .brand-separator { display: none; }
+            .topbar-brand > span:last-child { display: none; }
+
+            /* Collapse nav into horizontal scroll */
+            .topbar-nav {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                flex-shrink: 1;
+                min-width: 0;
+            }
+            .topbar-nav::-webkit-scrollbar { display: none; }
+            .topbar-link {
+                padding: 0 var(--gap-sm);
+                font-size: 0.75rem;
+                white-space: nowrap;
+                min-height: 44px;
+            }
+            .topbar-link svg { width: 14px; height: 14px; }
+
+            /* Right section: compact */
+            .topbar-right {
+                gap: var(--gap-sm);
+                flex-shrink: 0;
+            }
+            .status-indicator { font-size: 0.5625rem; }
+            .topbar-clock { display: none; }
         }
 
         /* ─── Panel ─── */
@@ -879,7 +919,7 @@
 <body>
     <!-- ═══ Top Bar ═══ -->
     <header class="topbar">
-        <a href="{% url 'dashboard:operations-index' %}" class="topbar-brand">
+        <a href="/" class="topbar-brand">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="currentColor" fill-opacity="0.06"/><circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.85"/></svg>
             نوّر
             <span class="brand-separator"></span>

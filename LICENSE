@@ -1,0 +1,74 @@
+NAWWAR (نوّر) — Proprietary License
+Copyright (c) 2026 ISSA AL-DALU. All Rights Reserved.
+
+================================================================================
+
+This software and associated documentation files (the "Software") are the
+exclusive intellectual property of ISSA AL-DALU, created as part of the
+CEGCO AI Bootcamp Competition (February 2026).
+
+NOTICE: This repository is made public for competition evaluation purposes ONLY.
+Public visibility does NOT grant any license to use, copy, modify, merge,
+publish, distribute, sublicense, or sell copies of the Software.
+
+================================================================================
+
+TERMS:
+
+1. NO LICENSE GRANTED
+   No rights are granted to any person or entity to use, reproduce, modify,
+   distribute, or create derivative works from this Software, in whole or in
+   part, for any purpose whatsoever — unless explicitly authorized in writing
+   by the copyright holder.
+
+2. VIEWING ONLY
+   The public availability of this repository permits viewing and evaluation
+   of the source code solely for the purpose of the CEGCO AI Bootcamp
+   Competition judging process. Any other use is strictly prohibited.
+
+3. COMPETITION CONTEXT
+   This Software was developed independently by ISSA AL-DALU. Any similarities
+   to other competition submissions that post-date the commit history of this
+   repository may constitute evidence of unauthorized copying.
+
+4. PROHIBITED ACTIONS
+   Without prior written consent from the copyright holder, you may NOT:
+   - Copy, fork, clone, or download this repository for any use
+   - Reproduce any portion of the code, architecture, or design patterns
+   - Use the Software or any derivative for commercial or non-commercial purposes
+   - Incorporate any part of this Software into another project
+   - Train AI/ML models on this codebase
+   - Present this work, or derivatives of it, as your own
+
+5. INTELLECTUAL PROPERTY
+   The following are original works protected under this license:
+   - The Nawwar (نوّر) platform concept, architecture, and implementation
+   - All AI prompt engineering, Arabic NLP pipelines, and RAG configurations
+   - The JEPCO API integration methodology and smart meter data processing
+   - The dual-dashboard design (Operations + Consumer)
+   - All UI/UX designs, animations, and visual assets
+   - The multi-model AI orchestration system (Claude + GPT-4o)
+   - The security research methodology and findings documentation
+
+6. ENFORCEMENT
+   Unauthorized use of this Software may result in:
+   - Disqualification from the CEGCO AI Bootcamp Competition
+   - Legal action under applicable copyright and intellectual property laws
+   - Civil claims for damages
+
+7. EVIDENCE OF ORIGINALITY
+   The git commit history of this repository serves as a timestamped record
+   of original authorship. Each commit is signed and dated, providing
+   verifiable proof of creation timeline.
+
+8. GOVERNING LAW
+   This license shall be governed by and construed in accordance with the
+   laws of the Hashemite Kingdom of Jordan.
+
+================================================================================
+
+For licensing inquiries, contact the copyright holder.
+
+ISSA AL-DALU
+February 2026
+Amman, Jordan

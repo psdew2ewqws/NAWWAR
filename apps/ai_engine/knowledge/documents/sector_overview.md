@@ -161,9 +161,10 @@ Consumers (المستهلكون)
 
 | Entity / الجهة | Phone / الهاتف | Website / الموقع |
 |:--|:--|:--|
-| EMRC / هيئة تنظيم الطاقة | 06-585-8615 | www.emrc.gov.jo |
-| NEPCO / نبكو | 06-585-8615 | www.nepco.com.jo |
-| JEPCO / جيبكو | 06-464-2622 | www.jepco.com.jo |
-| EDCO / كهرباء الجنوب | 03-235-1630 | www.edco.com.jo |
-| IDECO / كهرباء الشمال | 02-724-5511 | www.ideco.com.jo |
-| Ministry of Energy / وزارة الطاقة | 06-580-3060 | www.memr.gov.jo |
+| EMRC / هيئة تنظيم الطاقة | 06-5858615 | www.emrc.gov.jo |
+| NEPCO / نبكو | 06-5858615 | www.nepco.com.jo |
+| JEPCO / جيبكو | **116** (مجاني) / 06-5503600 | www.jepco.com.jo |
+| EDCO / كهرباء الجنوب | **080022288** (مجاني) / 06-5331330 | www.edco.jo |
+| IDECO / كهرباء الشمال | **080022005** (مجاني) / 02-7201500 | www.ideco.com.jo |
+| Ministry of Energy / وزارة الطاقة | 06-5803060 | www.memr.gov.jo |
+| منصة دعم الكهرباء | — | kahraba.gov.jo |

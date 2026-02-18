@@ -15,6 +15,9 @@ urlpatterns = [
 
     # Hello World
     path('hello/', core_views.hello_world, name='hello-world'),
+    path('server-ip/', core_views.server_ip, name='server-ip'),
+    path('proxy-test/', core_views.proxy_test, name='proxy-test'),
+    path('tts-test/', core_views.tts_test, name='tts-test'),
 
     # Authentication
     path('', user_views.home_view, name='home'),

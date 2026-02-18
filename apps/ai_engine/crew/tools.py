@@ -64,8 +64,16 @@ class TariffLookupTool(BaseTool):
         from apps.consumer.selectors import tariff_get_active, tariff_periods_list
 
         sector_upper = sector.strip().upper()
-        if sector_upper not in ("RESIDENTIAL", "COMMERCIAL", "INDUSTRIAL"):
-            sector_upper = "RESIDENTIAL"
+        # Map generic "RESIDENTIAL" to the subsidized tariff (most common)
+        if sector_upper == "RESIDENTIAL":
+            sector_upper = "RESIDENTIAL_SUBSIDIZED"
+        valid_sectors = (
+            "RESIDENTIAL_SUBSIDIZED", "RESIDENTIAL_UNSUBSIDIZED",
+            "COMMERCIAL", "INDUSTRIAL_SMALL", "INDUSTRIAL_MEDIUM",
+            "AGRICULTURAL", "HOTELS",
+        )
+        if sector_upper not in valid_sectors:
+            sector_upper = "RESIDENTIAL_SUBSIDIZED"
 
         tiers = list(tariff_get_active(sector=sector_upper))
         periods = list(tariff_periods_list())

@@ -156,6 +156,9 @@ JEPCO_CONFIG = {
     'DEFAULT_FILE_NUMBER': config('JEPCO_DEFAULT_FILE_NUMBER', default=''),
     'LANGUAGE': config('JEPCO_LANGUAGE', default='AR'),
     'TIMEOUT': 30,
+    # Jordan SOCKS5 proxy — routes JEPCO calls through a Jordanian IP.
+    # Format: socks5://user:pass@host:port
+    'PROXY_URL': config('JEPCO_PROXY_URL', default=''),
 }
 
 # WhatsApp Configuration (4whats.net API)
@@ -167,6 +170,9 @@ WHATSAPP_CONFIG = {
 
 # Site URL for generating external links (e.g. WhatsApp welcome messages)
 SITE_URL = config('SITE_URL', default='')
+
+# WhatsApp: kill switch (set WHATSAPP_ENABLED=True env var to activate)
+WHATSAPP_ENABLED = config('WHATSAPP_ENABLED', default=False, cast=bool)
 
 # WhatsApp webhook HMAC secret for signature verification
 WHATSAPP_WEBHOOK_SECRET = config('WHATSAPP_WEBHOOK_SECRET', default='')
@@ -226,23 +232,44 @@ CEGCO_PLANTS = {
     },
 }
 
-# EMRC Tariff Configuration (Jordanian fils per kWh)
+# EMRC Tariff Configuration — Effective July 1, 2024
+# Source: https://www.jepco.com.jo/ar/Home/فئات-وشرائح-تعرفة-الكهرباء
 EMRC_TARIFFS = {
-    'RESIDENTIAL': [
-        {'tier': 1, 'range': '1-160', 'min_kwh': 0, 'max_kwh': 160, 'rate_fils': 33},
-        {'tier': 2, 'range': '161-300', 'min_kwh': 161, 'max_kwh': 300, 'rate_fils': 72},
-        {'tier': 3, 'range': '301-500', 'min_kwh': 301, 'max_kwh': 500, 'rate_fils': 86},
-        {'tier': 4, 'range': '501-600', 'min_kwh': 501, 'max_kwh': 600, 'rate_fils': 114},
-        {'tier': 5, 'range': '601-750', 'min_kwh': 601, 'max_kwh': 750, 'rate_fils': 158},
-        {'tier': 6, 'range': '751-1000', 'min_kwh': 751, 'max_kwh': 1000, 'rate_fils': 188},
-        {'tier': 7, 'range': '1000+', 'min_kwh': 1001, 'max_kwh': 99999, 'rate_fils': 265},
+    'RESIDENTIAL_SUBSIDIZED': [
+        {'tier': 1, 'range': '1-300', 'min_kwh': 0, 'max_kwh': 300, 'rate_fils': 50},
+        {'tier': 2, 'range': '301-600', 'min_kwh': 301, 'max_kwh': 600, 'rate_fils': 100},
+        {'tier': 3, 'range': '600+', 'min_kwh': 601, 'max_kwh': 99999, 'rate_fils': 200},
+    ],
+    'RESIDENTIAL_UNSUBSIDIZED': [
+        {'tier': 1, 'range': '1-1000', 'min_kwh': 0, 'max_kwh': 1000, 'rate_fils': 120},
+        {'tier': 2, 'range': '1000+', 'min_kwh': 1001, 'max_kwh': 99999, 'rate_fils': 150},
     ],
     'COMMERCIAL': [
-        {'tier': 1, 'range': 'all', 'min_kwh': 0, 'max_kwh': 99999, 'rate_fils': 115},
+        {'tier': 1, 'range': '1-2000', 'min_kwh': 0, 'max_kwh': 2000, 'rate_fils': 120},
+        {'tier': 2, 'range': '2000+', 'min_kwh': 2001, 'max_kwh': 99999, 'rate_fils': 152},
     ],
-    'INDUSTRIAL': [
-        {'tier': 1, 'range': 'all', 'min_kwh': 0, 'max_kwh': 99999, 'rate_fils': 76},
+    'INDUSTRIAL_SMALL': [
+        {'tier': 1, 'range': '1-10000', 'min_kwh': 0, 'max_kwh': 10000, 'rate_fils': 60},
+        {'tier': 2, 'range': '10000+', 'min_kwh': 10001, 'max_kwh': 99999, 'rate_fils': 68},
     ],
+    'INDUSTRIAL_MEDIUM': [
+        {'tier': 1, 'range': 'peak', 'rate_fils': 79, 'period': '5PM-11PM'},
+        {'tier': 2, 'range': 'partial', 'rate_fils': 69, 'period': '2PM-5PM, 11PM-5AM'},
+        {'tier': 3, 'range': 'off-peak', 'rate_fils': 59, 'period': '5AM-2PM'},
+    ],
+    'AGRICULTURAL': [
+        {'tier': 1, 'range': 'daytime', 'rate_fils': 55},
+        {'tier': 2, 'range': 'nighttime', 'rate_fils': 49},
+    ],
+    'HOTELS': [
+        {'tier': 1, 'range': 'all', 'min_kwh': 0, 'max_kwh': 99999, 'rate_fils': 82},
+    ],
+}
+EMRC_MINIMUM_MONTHLY_JOD = 1.750
+EMRC_MUNICIPALITY_TAX_PERCENT = 10
+EMRC_DIRECT_SUBSIDY = {
+    '51-200': 2.5,   # JOD deducted for 51-200 kWh/month
+    '201-600': 2.0,   # JOD deducted for 201-600 kWh/month
 }
 
 # Logging

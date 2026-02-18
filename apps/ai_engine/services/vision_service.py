@@ -109,7 +109,7 @@ def _build_line_items(tier_breakdown: list) -> list[dict]:
 
         items.append({
             'description': f'Tier {tier_num}: {kwh} kWh @ {rate} fils/kWh',
-            'description_ar': f'الشريحة {tier_num}: {kwh} ك.و.س × {rate} فلس',
+            'description_ar': f'الشريحة {tier_num}: {kwh} ك.و.س × {rate/1000:.3f} دينار',
             'amount_fils': amount,
             'kwh': kwh,
             'tariff_tier': tier_num,

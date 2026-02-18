@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 
 import chromadb
+from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 from django.conf import settings
 
 from apps.ai_engine.clients.openai_client import OpenAIClient
@@ -26,9 +27,15 @@ class KnowledgeBaseLoader:
 
     def __init__(self):
         self.chroma = chromadb.PersistentClient(path=str(settings.CHROMADB_PATH))
+        # Use OpenAI text-embedding-3-small for proper Arabic support
+        self._embed_fn = OpenAIEmbeddingFunction(
+            api_key=settings.OPENAI_API_KEY,
+            model_name='text-embedding-3-small',
+        )
         self.collection = self.chroma.get_or_create_collection(
             name=self.COLLECTION_NAME,
             metadata={'hnsw:space': 'cosine'},
+            embedding_function=self._embed_fn,
         )
         self._openai = None
 
@@ -118,6 +125,7 @@ class KnowledgeBaseLoader:
         self.collection = self.chroma.get_or_create_collection(
             name=self.COLLECTION_NAME,
             metadata={'hnsw:space': 'cosine'},
+            embedding_function=self._embed_fn,
         )
         logger.info("Reset ChromaDB collection '%s'", self.COLLECTION_NAME)
 

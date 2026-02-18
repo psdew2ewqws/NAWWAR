@@ -9,6 +9,7 @@ import hashlib
 import hmac
 import json
 import logging
+import threading
 
 from django.conf import settings
 from django.core.cache import cache
@@ -26,11 +27,46 @@ from apps.core.utils import sanitise_text, mask_phone
 from apps.whatsapp.clients.whatsapp_client import WhatsAppClient
 from apps.whatsapp.services.message_router import MessageRouter
 
+from django.http import JsonResponse as DjangoJsonResponse
+
 logger = logging.getLogger(__name__)
+
+
+def webhook_debug(request):
+    """Debug view: shows last 5 webhook payloads received + recent sessions."""
+    payloads = cache.get('wa_debug_payloads', [])
+    # Also pull recent sessions from DB as fallback (cache may not be shared)
+    from apps.consumer.models import ConversationSession, Message as Msg
+    recent_sessions = []
+    for s in ConversationSession.objects.filter(platform='whatsapp').order_by('-created_at')[:5]:
+        msgs = list(Msg.objects.filter(session=s).order_by('-created_at')[:3].values('role', 'content', 'created_at'))
+        recent_sessions.append({
+            'phone': s.phone_number,
+            'created': str(s.created_at),
+            'messages': [{'role': m['role'], 'content': m['content'][:100], 'at': str(m['created_at'])} for m in msgs],
+        })
+    return DjangoJsonResponse({
+        'payloads_captured': len(payloads),
+        'payloads': payloads,
+        'recent_whatsapp_sessions': recent_sessions,
+    })
 
 # Per-phone rate limit: max messages per minute
 PHONE_RATE_LIMIT = 20
 PHONE_RATE_WINDOW = 60  # seconds
+
+
+def _run_async_in_thread(coro):
+    """Run an async coroutine in a daemon thread with its own event loop.
+
+    This is necessary because Gunicorn/WSGI doesn't have a running
+    asyncio event loop, so asyncio.ensure_future() would fail.
+    """
+    def _target():
+        asyncio.run(coro)
+
+    thread = threading.Thread(target=_target, daemon=True)
+    thread.start()
 
 
 class WhatsAppWebhookView(APIView):
@@ -51,6 +87,10 @@ class WhatsAppWebhookView(APIView):
         Validates HMAC signature (if secret configured), normalizes
         the payload, and dispatches async processing.
         """
+        # Kill switch: disable all webhook processing
+        if not getattr(settings, 'WHATSAPP_ENABLED', False):
+            return Response({'status': 'disabled'}, status=status.HTTP_200_OK)
+
         # HMAC signature verification
         webhook_secret = getattr(settings, 'WHATSAPP_WEBHOOK_SECRET', '')
         if webhook_secret:
@@ -81,9 +121,20 @@ class WhatsAppWebhookView(APIView):
 
         body = request.data
 
+        # Store raw payload for debugging (last 5 payloads)
+        try:
+            raw_json = json.dumps(body, ensure_ascii=False, default=str)
+            debug_payloads = cache.get('wa_debug_payloads', [])
+            debug_payloads.append(raw_json[:2000])  # Truncate large payloads
+            cache.set('wa_debug_payloads', debug_payloads[-5:], 3600)  # Keep 1 hour
+        except Exception:
+            pass
+
         logger.info(
-            "4whats webhook: type=%s, keys=%s",
-            body.get('type', '?'), ','.join(body.keys()) if isinstance(body, dict) else '?',
+            "4whats webhook: type=%s, keys=%s, raw=%s",
+            body.get('type', '?'),
+            ','.join(body.keys()) if isinstance(body, dict) else '?',
+            json.dumps(body, ensure_ascii=False, default=str)[:500],
         )
 
         try:
@@ -111,7 +162,10 @@ class WhatsAppWebhookView(APIView):
                     return Response({'status': 'rate_limited'}, status=status.HTTP_200_OK)
                 cache.set(phone_key, phone_count + 1, PHONE_RATE_WINDOW)
 
-                asyncio.ensure_future(
+                # Run async processing in a background thread with its
+                # own event loop.  asyncio.ensure_future() requires a
+                # running loop, which doesn't exist under Gunicorn/WSGI.
+                _run_async_in_thread(
                     self._process_message(
                         message=message_data,
                         sender=sender,
@@ -128,58 +182,86 @@ class WhatsAppWebhookView(APIView):
         Normalize a 4whats.net webhook payload into the format
         expected by MessageRouter.
 
-        4whats payloads typically contain:
-        - body/message/text: the message content
-        - from/phone/sender/chatId: sender number
-        - type/messageType: text, image, audio, video, location, etc.
-        - media/file/image: media URL for non-text messages
-        - lat/lng or latitude/longitude: for location messages
+        4whats payloads can arrive in several shapes:
+        1. Flat: {from, body, type, ...}
+        2. Nested under 'data': {instanceId, data: {from, body, type, ...}}
+        3. Nested under 'messages': {instanceId, messages: [{from, body, ...}]}
+        4. ACK/status: {instanceId, ack: [...]}
 
         Returns None for status updates or unrecognizable payloads.
         """
-        # Skip status-only updates (delivery receipts, etc.)
+        # Skip delivery receipts / ack payloads
+        if 'ack' in body and 'from' not in body and 'body' not in body:
+            logger.debug("Skipping ack/delivery receipt payload")
+            return None
         if body.get('event') in ('ack', 'seen', 'delivered', 'read'):
             logger.debug("Skipping status event: %s", body.get('event'))
             return None
 
+        # --- Unwrap nested payloads ---
+        # 4whats may nest message data under 'data' or 'messages'
+        msg = body
+        if 'data' in body and isinstance(body['data'], dict):
+            msg = body['data']
+            logger.info("Unwrapped 'data' key from payload")
+        elif 'messages' in body and isinstance(body['messages'], list) and body['messages']:
+            msg = body['messages'][0]
+            logger.info("Unwrapped 'messages[0]' from payload")
+
+        # Skip outgoing messages (fromMe)
+        if msg.get('fromMe') is True:
+            logger.debug("Skipping outgoing message (fromMe=true)")
+            return None
+
+        # Skip group messages — only respond to direct/private chats
+        chat_id = msg.get('chatId', '') or msg.get('from', '') or ''
+        if '@g.us' in str(chat_id):
+            logger.debug("Skipping group message from %s", chat_id)
+            return None
+
         # Extract sender phone — try common field names
         sender = (
-            body.get('from')
-            or body.get('phone')
-            or body.get('sender')
-            or body.get('chatId', '')
+            msg.get('from')
+            or msg.get('phone')
+            or msg.get('sender')
+            or msg.get('chatId', '')
+            or msg.get('author', '')
         )
         # Clean phone: remove @c.us suffix and non-digit chars
         if isinstance(sender, str):
             sender = sender.replace('@c.us', '').replace('@s.whatsapp.net', '')
 
         if not sender:
-            logger.warning("No sender found in 4whats payload")
+            logger.warning("No sender found in 4whats payload: keys=%s",
+                           list(msg.keys())[:10])
             return None
 
         # Determine message type
+        # 4whats uses 'chat' for text messages, normalize it
         msg_type = (
-            body.get('type')
-            or body.get('messageType')
+            msg.get('type')
+            or msg.get('messageType')
             or 'text'
         ).lower()
+        if msg_type == 'chat':
+            msg_type = 'text'
 
         # Normalize into MessageRouter format
         if msg_type in ('image', 'photo'):
             media_url = (
-                body.get('media')
-                or body.get('file')
-                or body.get('image')
-                or body.get('body')
+                msg.get('media')
+                or msg.get('file')
+                or msg.get('image')
+                or msg.get('body')
                 or ''
             )
-            caption = body.get('caption', '')
-            mime_type = body.get('mimetype') or body.get('mime_type') or 'image/jpeg'
+            caption = msg.get('caption', '')
+            mime_type = msg.get('mimetype') or msg.get('mime_type') or 'image/jpeg'
             return {
                 'type': 'image',
                 'from': sender,
                 'image': {
-                    'id': media_url,  # WhatsAppClient.download_media() expects a URL now
+                    'id': media_url,
                     'mime_type': mime_type,
                     'caption': caption,
                 },
@@ -187,10 +269,10 @@ class WhatsAppWebhookView(APIView):
 
         elif msg_type in ('audio', 'voice', 'ptt'):
             media_url = (
-                body.get('media')
-                or body.get('file')
-                or body.get('audio')
-                or body.get('body')
+                msg.get('media')
+                or msg.get('file')
+                or msg.get('audio')
+                or msg.get('body')
                 or ''
             )
             return {
@@ -202,8 +284,8 @@ class WhatsAppWebhookView(APIView):
             }
 
         elif msg_type == 'location':
-            lat = body.get('lat') or body.get('latitude') or 0
-            lng = body.get('lng') or body.get('longitude') or 0
+            lat = msg.get('lat') or msg.get('latitude') or 0
+            lng = msg.get('lng') or msg.get('longitude') or 0
             return {
                 'type': 'location',
                 'from': sender,
@@ -216,13 +298,14 @@ class WhatsAppWebhookView(APIView):
         else:
             # Default: treat as text
             text = (
-                body.get('body')
-                or body.get('message')
-                or body.get('text')
+                msg.get('body')
+                or msg.get('message')
+                or msg.get('text')
                 or ''
             )
             if not text:
-                logger.warning("Empty text message from %s", mask_phone(sender))
+                logger.warning("Empty text message from %s, keys=%s",
+                               mask_phone(sender), list(msg.keys())[:10])
                 return None
 
             return {

@@ -28,13 +28,18 @@ CACHE_BYPASS_KEYWORDS = {'تحديث', '/refresh', 'refresh'}
 # Intent keywords for classification
 # Arabic stems used to handle morphological variants (فاتورة/فاتورتي/فواتير)
 INTENT_KEYWORDS = {
-    'billing': ['فاتور', 'فواتير', 'bill', 'مبلغ', 'amount', 'دفع', 'pay', 'رصيد', 'balance', 'حساب', 'اشتراك'],
-    'tariff': ['تعرفة', 'tariff', 'شريحة', 'tier', 'سعر', 'rate', 'كيلوواط'],
-    'outage': ['انقطاع', 'outage', 'عطل', 'fault', 'كهرباء مقطوعة', 'power cut'],
+    'billing': ['فاتور', 'فواتير', 'bill', 'مبلغ', 'amount', 'دفع', 'pay', 'رصيد', 'balance', 'حساب', 'اشتراك', 'دينار', 'فلس'],
+    'tariff': ['تعرفة', 'tariff', 'شريحة', 'tier', 'سعر', 'rate', 'كيلوواط', 'سكنية', 'منزلية', 'تجاري', 'زراعي', 'صناعي', 'مدعوم', 'دعم'],
+    'outage': ['انقطاع', 'outage', 'عطل', 'fault', 'كهرباء مقطوعة', 'مقطوعة', 'power cut'],
     'complaint': ['شكوى', 'complaint', 'مشكلة', 'problem', 'عداد', 'meter'],
-    'savings': ['توفير', 'وفر', 'save', 'تخفيض', 'reduce', 'نصائح', 'tips', 'ترشيد'],
+    'savings': ['توفير', 'وفر', 'أوفر', 'save', 'تخفيض', 'reduce', 'نصائح', 'tips', 'ترشيد', 'شمسي', 'solar'],
+    'contact': ['رقم', 'هاتف', 'اتصل', 'phone', 'contact', 'فرع', 'branch', 'عنوان', 'address', 'جيبكو', 'jepco', 'شركة الكهرباء'],
     'operations': ['محطة', 'plant', 'توربين', 'turbine', 'توليد', 'generation', 'صيانة', 'maintenance', 'عقبة', 'ريشة', 'رحاب'],
 }
+
+# Intents whose answers are mostly static — cached at intent level
+FAQ_INTENTS = {'tariff', 'contact', 'savings', 'outage', 'complaint'}
+FAQ_CACHE_TTL = 14400  # 4 hours for FAQ-type responses
 
 
 class RAGService:
@@ -50,7 +55,7 @@ class RAGService:
         query: str,
         language: str = 'ar',
         context_type: str = 'consumer',
-        n_results: int = 5,
+        n_results: int = 3,
     ) -> str:
         """
         Answer a user query using knowledge base retrieval + Claude.
@@ -66,10 +71,23 @@ class RAGService:
         """
         logger.info("RAG query: type=%s, length=%d", context_type, len(query))
 
-        # Check cache (bypass if user requests refresh)
         bypass_cache = any(kw in query for kw in CACHE_BYPASS_KEYWORDS)
-        cache_key = normalise_and_hash(f"{context_type}:{query}", prefix='rag')
 
+        # Classify intent for FAQ caching
+        intent = await self.classify_intent(text=query)
+
+        # FAQ-level cache: common intents share cached answers
+        faq_cache_key = None
+        if intent in FAQ_INTENTS and not bypass_cache:
+            faq_cache_key = normalise_and_hash(f"faq:{context_type}:{intent}", prefix='faq')
+            cached_faq = cache.get(faq_cache_key)
+            if cached_faq:
+                logger.info("FAQ cache HIT for intent=%s, key=%s", intent, faq_cache_key)
+                return cached_faq
+            logger.info("FAQ cache MISS for intent=%s", intent)
+
+        # Per-query cache (existing logic)
+        cache_key = normalise_and_hash(f"{context_type}:{query}", prefix='rag')
         if not bypass_cache:
             cached = cache.get(cache_key)
             if cached:
@@ -82,10 +100,11 @@ class RAGService:
 
         if not hits:
             logger.warning("No knowledge base hits for query (len=%d)", len(query))
-            return "لا تتوفر لدي هذه المعلومة حالياً. يرجى التواصل مع الجهة المختصة."
-
-        # Build context string from retrieved chunks
-        context = self._format_context(hits)
+            # Fall back to Claude without RAG context rather than a dead-end message
+            context = "(لا تتوفر مستندات مرجعية. أجب بأفضل ما لديك بناءً على معرفتك العامة بقطاع الكهرباء الأردني.)"
+        else:
+            # Build context string from retrieved chunks
+            context = self._format_context(hits)
 
         # Select prompt template
         if context_type == 'operations':
@@ -103,8 +122,13 @@ class RAGService:
 
         result = validate_ai_response(response)
 
-        # Store in cache
+        # Store in per-query cache
         cache.set(cache_key, result, RAG_CACHE_TTL)
+
+        # Also store in FAQ cache for intent-level sharing
+        if faq_cache_key:
+            cache.set(faq_cache_key, result, FAQ_CACHE_TTL)
+            logger.info("FAQ cache SET for intent=%s", intent)
 
         return result
 

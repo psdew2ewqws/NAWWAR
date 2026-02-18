@@ -26,6 +26,19 @@ BILL_FIELD_TYPES = {
     'tier_breakdown': list,
 }
 
+_ALLOWED_DOMAINS = {'jepco.com.jo', 'emrc.gov.jo', 'nepco.com.jo', 'cegco.com.jo'}
+_URL_RE = re.compile(r'https?://[^\s]+')
+_KWH_RE = re.compile(r'(\d[\d,]*)\s*(?:كيلو واط|kWh)', re.IGNORECASE)
+_JOD_RE = re.compile(r'(\d[\d,]*(?:\.\d+)?)\s*(?:دينار|JOD|JD)', re.IGNORECASE)
+
+
+def validate_response_length(response: str, max_lines: int = 25) -> str:
+    """Truncate responses that exceed max_lines."""
+    lines = response.split('\n')
+    if len(lines) > max_lines:
+        return '\n'.join(lines[:max_lines])
+    return response
+
 
 def validate_bill_scan(data: dict) -> dict:
     """
@@ -119,11 +132,45 @@ def validate_ai_response(response: str) -> str:
         'SYSTEM_PROMPT_AR',
         'system_prompt=',
         'أنت "نوّار"، مساعد ذكي متخصص',
+        'CONSUMER_QA_PROMPT',
+        'OPERATIONS_QA_PROMPT',
+        'SAVINGS_PROMPT',
+        'check_prompt_injection',
+        'INJECTION_PATTERNS',
+        '_INJECTION_PATTERNS',
     ]
     for fragment in system_prompt_fragments:
         if fragment in cleaned:
             logger.warning("System prompt leak detected in AI output, replacing with fallback")
             return "عذراً، لا أستطيع الإجابة على هذا السؤال. كيف يمكنني مساعدتك بخصوص الكهرباء؟"
+
+    # Strip fabricated URLs (only allow known Jordan electricity domains)
+    def _is_allowed_url(url: str) -> bool:
+        try:
+            domain = url.split('/')[2].lower()
+            return any(domain == d or domain.endswith('.' + d) for d in _ALLOWED_DOMAINS)
+        except IndexError:
+            return False
+
+    for url in _URL_RE.findall(cleaned):
+        if not _is_allowed_url(url):
+            logger.warning("Stripping fabricated URL from AI output: %s", url)
+            cleaned = cleaned.replace(url, '')
+
+    # Electricity-domain sanity checks for residential context
+    kwh_matches = _KWH_RE.findall(cleaned)
+    for match in kwh_matches:
+        value = int(match.replace(',', ''))
+        if value > 50000:
+            logger.warning("Suspicious kWh value %d in AI output, likely hallucinated", value)
+            cleaned = cleaned.replace(match, '')
+
+    jod_matches = _JOD_RE.findall(cleaned)
+    for match in jod_matches:
+        value = float(match.replace(',', ''))
+        if value > 5000:
+            logger.warning("Suspicious JOD amount %.2f in AI output, likely hallucinated", value)
+            cleaned = cleaned.replace(match, '')
 
     # Collapse excessive newlines (more than 2 consecutive)
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
@@ -131,4 +178,9 @@ def validate_ai_response(response: str) -> str:
     # Remove null bytes
     cleaned = cleaned.replace('\x00', '')
 
-    return cleaned.strip()
+    cleaned = cleaned.strip()
+
+    # Enforce response length limit
+    cleaned = validate_response_length(cleaned)
+
+    return cleaned
