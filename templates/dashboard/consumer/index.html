@@ -809,10 +809,14 @@
 
         providerPromise.then(function(providerData) {
             /* If we got provider data from browser, attach it to the payload */
+            var sidebarRendered = false;
             if (providerData && providerData.smart_meter) {
                 payload.jepco_data = providerData;
                 /* Also update the sidebar smart meter widget */
                 renderSmartMeterData(fileMatch[1], providerData.smart_meter, null);
+                var smb = document.getElementById('sm-body');
+                if (smb) smb.dataset.fileNumber = fileMatch[1];
+                sidebarRendered = true;
             }
 
             return fetch('/nawwar/api/chat/', {
@@ -849,10 +853,8 @@
             /* When chat returns a file_number, remember it and load sidebar */
             if (data.file_number) {
                 lastFileNumber = data.file_number;
-                /* Always load if sidebar is still showing placeholder or different file */
-                var smBody = document.getElementById('sm-body');
-                var sidebarEmpty = !smBody || !smBody.querySelector('.sm-grid');
-                if (sidebarEmpty || lastSendFetchedFile !== data.file_number) {
+                /* Only load sidebar if it wasn't already rendered by the pre-fetch */
+                if (!sidebarRendered) {
                     loadSmartMeter(data.file_number);
                 }
             }
@@ -1122,7 +1124,7 @@
         body.innerHTML = html;
     }
 
-    /* ── Load smart meter — calls provider directly from browser ── */
+    /* ── Load smart meter — calls provider, falls back to server ── */
     function loadSmartMeter(fileNumber) {
         var body = document.getElementById('sm-body');
         var tag = document.getElementById('sm-tag');
@@ -1131,14 +1133,22 @@
             return;
         }
 
+        /* Don't overwrite if sidebar already has data for this file */
+        if (body.querySelector('.sm-grid') && body.dataset.fileNumber === fileNumber) return;
+
         /* Show loading animation */
         body.innerHTML = '<div class="sm-loader-wrap"><div class="sm-loader-bars"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><div class="sm-loader-text">جاري تحميل بيانات العداد...</div></div>';
         tag.innerHTML = '';
 
-        /* Call provider directly from the user's browser (bypasses server geo-blocking) */
         jepcoFetchSmartMeter(fileNumber)
         .then(function(sm) {
-            renderSmartMeterData(fileNumber, sm, null);
+            if (sm) {
+                body.dataset.fileNumber = fileNumber;
+                renderSmartMeterData(fileNumber, sm, null);
+            } else {
+                body.innerHTML = '<div class="sm-loader-wrap"><div class="sm-loader-text" style="color:var(--warning)">لا توجد بيانات للعداد الذكي لهذا الرقم</div></div>';
+                tag.innerHTML = '';
+            }
         })
         .catch(function() {
             body.innerHTML = '<div class="sm-loader-wrap"><div class="sm-loader-text" style="color:var(--warning)">فشل تحميل البيانات — تأكد من اتصالك</div></div>';
