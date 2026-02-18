@@ -704,6 +704,7 @@
     var FILE_NUM_RE = /\b(0\d{12})\b/;
 
     function jepcoFetchSmartMeter(fileNumber) {
+        /* Try direct JEPCO call first, fall back to own server if CORS blocks it */
         return fetch(JEPCO_BASE + '/Dashboard/SmartMeterDashboard', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -715,8 +716,18 @@
             return null;
         })
         .catch(function(e) {
-            console.warn('SmartMeter direct call failed:', e);
-            return null;
+            console.warn('SmartMeter direct call failed (CORS), falling back to server:', e);
+            /* Fallback: fetch via own server which proxies the JEPCO call */
+            return fetch('/nawwar/api/jepco/smart-meter/' + fileNumber + '/')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.statusCode === 'Success' && data.body) return data.body;
+                    return null;
+                })
+                .catch(function(e2) {
+                    console.warn('SmartMeter server fallback also failed:', e2);
+                    return null;
+                });
         });
     }
 
@@ -838,7 +849,10 @@
             /* When chat returns a file_number, remember it and load sidebar */
             if (data.file_number) {
                 lastFileNumber = data.file_number;
-                if (lastSendFetchedFile !== data.file_number) {
+                /* Always load if sidebar is still showing placeholder or different file */
+                var smBody = document.getElementById('sm-body');
+                var sidebarEmpty = !smBody || !smBody.querySelector('.sm-grid');
+                if (sidebarEmpty || lastSendFetchedFile !== data.file_number) {
                     loadSmartMeter(data.file_number);
                 }
             }
