@@ -946,27 +946,40 @@
 
                 var fd = new FormData();
                 fd.append('audio', blob, 'recording.webm');
+                if (sessionKey) fd.append('session_key', sessionKey);
+                if (lastFileNumber) fd.append('file_number', lastFileNumber);
+
+                var voiceAbort = new AbortController();
+                var voiceTimeout = setTimeout(function() { voiceAbort.abort(); }, 45000);
 
                 fetch('/nawwar/api/chat/voice/', {
                     method: 'POST',
-                    body: fd
+                    body: fd,
+                    signal: voiceAbort.signal
                 })
-                .then(function(r) { return r.json(); })
+                .then(function(r) { clearTimeout(voiceTimeout); return r.json(); })
                 .then(function(data) {
                     hideTyping();
                     if (data.error && !data.reply) {
                         addMsg('system', '<span style="color:var(--critical)">فشلت معالجة الرسالة الصوتية. حاول مرة أخرى.</span>');
                         return;
                     }
-                    var html = '<div class="msg-bubble-title">الرد الصوتي</div>';
+                    var html = '';
                     if (data.transcript) {
                         html += '<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px;font-family:var(--mono)">النص: ' + esc(data.transcript) + '</div>';
                     }
                     html += '<div style="font-size:0.8125rem;color:var(--text-secondary);line-height:1.8">' + esc(data.reply).replace(/\n/g, '<br>') + '</div>';
-                    if (data.intent) {
-                        html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-subtle);font-family:var(--mono);font-size:0.625rem;color:var(--info)">VOICE PIPELINE &bull; ' + data.intent.toUpperCase() + '</div>';
+                    if (data.processing_ms) {
+                        html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-subtle);font-family:var(--mono);font-size:0.625rem;color:var(--text-muted)">'
+                            + (data.intent ? data.intent.toUpperCase() + ' &bull; ' : '') + 'VOICE &bull; ' + data.processing_ms + 'ms</div>';
                     }
                     addMsg('system', html);
+
+                    /* Update sidebar if voice response includes a file number */
+                    if (data.file_number) {
+                        lastFileNumber = data.file_number;
+                        loadSmartMeter(data.file_number);
+                    }
 
                     /* Play TTS audio response */
                     if (data.audio_b64) {
@@ -976,9 +989,13 @@
                         } catch(e) {}
                     }
                 })
-                .catch(function() {
+                .catch(function(err) {
+                    clearTimeout(voiceTimeout);
                     hideTyping();
-                    addMsg('system', '<span style="color:var(--critical)">عذراً، تعذر الاتصال بالخادم. حاول مرة أخرى.</span>');
+                    var msg = err && err.name === 'AbortError'
+                        ? 'انتهت مهلة الاتصال. حاول مرة أخرى.'
+                        : 'عذراً، تعذر الاتصال بالخادم. حاول مرة أخرى.';
+                    addMsg('system', '<span style="color:var(--critical)">' + msg + '</span>');
                 });
             };
             mr.start();

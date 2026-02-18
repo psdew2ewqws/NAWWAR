@@ -393,7 +393,7 @@ async def api_chat_scan(request):
 @csrf_exempt
 @require_POST
 async def api_chat_voice(request):
-    """Voice chat endpoint — Whisper STT → RAG → Edge-TTS response."""
+    """Voice chat endpoint — Whisper STT → LLMService (full pipeline) → Edge-TTS."""
     try:
         audio_file = request.FILES.get('audio')
         if not audio_file:
@@ -401,21 +401,98 @@ async def api_chat_voice(request):
 
         audio_data = audio_file.read()
 
+        # Read session/file context from FormData (sent by frontend)
+        session_key = request.POST.get('session_key', '').strip()
+        file_number = request.POST.get('file_number', '').strip() or None
+
+        # Step 1: Transcribe audio → text
         from apps.ai_engine.services.voice_service import VoiceService
-        svc = VoiceService()
-        result = await svc.process_voice_message(audio_data=audio_data)
+        voice_svc = VoiceService()
+        transcript = await voice_svc.transcribe(audio_data=audio_data)
 
-        # Encode TTS audio as base64 for the frontend
-        audio_b64 = ''
-        if result.get('audio_data'):
-            audio_b64 = base64.b64encode(result['audio_data']).decode('utf-8')
+        if not transcript or not transcript.strip():
+            return JsonResponse({
+                'transcript': '',
+                'reply': 'لم أتمكن من فهم الرسالة الصوتية. حاول مرة أخرى بوضوح.',
+                'audio_b64': '',
+                'intent': 'general',
+            })
 
-        return JsonResponse({
-            'transcript': result['transcript'],
+        # Step 2: Load session context (same as text chat)
+        from apps.consumer.models.conversation import ConversationSession, Message
+        from asgiref.sync import sync_to_async
+        session = None
+        if session_key:
+            session = await sync_to_async(
+                ConversationSession.objects.filter(session_key=session_key).first
+            )()
+
+        if not file_number and session and session.context:
+            file_number = session.context.get('file_number') or None
+
+        session_ctx = {}
+        if session and session.context:
+            session_ctx = session.context
+
+        # Save user message (the transcript)
+        if session:
+            await sync_to_async(Message.objects.create)(
+                session=session, role='user', content=transcript,
+            )
+
+        # Step 3: Route through full LLM pipeline (with JEPCO, appliances, etc.)
+        from apps.ai_engine.services.llm_service import LLMService
+        svc = LLMService()
+        result = await svc.route_request(
+            message_type='text', content=transcript, file_number=file_number,
+            session_context=session_ctx,
+        )
+
+        response = {
+            'transcript': transcript,
             'reply': result['response_text'],
-            'audio_b64': audio_b64,
-            'intent': result.get('intent', 'general'),
-        })
+            'intent': result['metadata'].get('intent', 'general'),
+            'processing_ms': result['metadata'].get('processing_ms', 0),
+        }
+
+        if result['metadata'].get('file_number'):
+            response['file_number'] = result['metadata']['file_number']
+
+        # Step 4: Synthesize TTS audio (non-fatal)
+        try:
+            audio_bytes = await voice_svc.synthesize(text=result['response_text'])
+            if audio_bytes:
+                response['audio_b64'] = base64.b64encode(audio_bytes).decode('utf-8')
+        except Exception as tts_err:
+            logger.warning("Voice TTS synthesis failed (non-fatal): %s", tts_err)
+            response['audio_b64'] = ''
+
+        # Save assistant message and persist context
+        if session:
+            await sync_to_async(Message.objects.create)(
+                session=session, role='assistant', content=result['response_text'],
+                processing_time_ms=result['metadata'].get('processing_ms', 0),
+            )
+            returned_file = result['metadata'].get('file_number')
+            if returned_file or result['metadata'].get('awaiting'):
+                ctx = session.context or {}
+                if returned_file:
+                    ctx['file_number'] = returned_file
+                awaiting = result['metadata'].get('awaiting')
+                if awaiting:
+                    ctx['awaiting'] = awaiting
+                else:
+                    ctx.pop('awaiting', None)
+                if result['metadata'].get('appliances'):
+                    ctx['appliances'] = result['metadata']['appliances']
+                if result['metadata'].get('expected_kwh'):
+                    ctx['expected_kwh'] = result['metadata']['expected_kwh']
+                if result['metadata'].get('projected_kwh'):
+                    ctx['projected_kwh'] = result['metadata']['projected_kwh']
+                session.context = ctx
+                await sync_to_async(session.save)(update_fields=['context'])
+
+        return JsonResponse(response)
 
     except Exception as e:
         logger.exception("api_chat_voice error: %s", e)

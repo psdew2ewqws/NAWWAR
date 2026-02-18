@@ -167,7 +167,14 @@ class LLMService:
 
         # Check if we're in an appliance conversation flow
         if file_number and session_context and session_context.get('awaiting') == 'appliance_list':
-            return await self._analyze_appliances(text, file_number, session_context)
+            # Try appliance matching first
+            result = await self._analyze_appliances(text, file_number, session_context)
+            # If appliances were found, return the analysis
+            if result['metadata'].get('appliances'):
+                return result
+            # Otherwise, the user is asking a follow-up question — use AI
+            # with their consumption context instead of re-running full analysis
+            return await self._followup_with_context(text, file_number, session_context)
 
         intent = await self.rag.classify_intent(text=text)
 
@@ -180,7 +187,19 @@ class LLMService:
         detected_file = file_match.group(1) if file_match else None
         effective_file = detected_file or file_number
 
+        # Only run full JEPCO analysis for NEW file numbers (first time).
+        # For follow-up questions when we already have data, use contextual AI.
+        already_analyzed = (
+            session_context
+            and session_context.get('projected_kwh')
+            and not detected_file  # user didn't type a new file number
+        )
+
         if effective_file and (intent in ('billing', 'savings', 'general') or is_bare_number):
+            if already_analyzed and not is_bare_number:
+                # User already has analysis — answer follow-up with context
+                return await self._followup_with_context(text, effective_file, session_context)
+
             jepco_result = await self._analyze_jepco(
                 text=text, file_number=effective_file, intent=intent,
                 jepco_data=jepco_data,
@@ -290,6 +309,87 @@ class LLMService:
                 f"عذراً، الرقم {file_number} غير صحيح أو لا تتوفر له بيانات عداد ذكي. "
                 "تأكد من رقم الملف (015XXXXXXXXXX — 13 خانة) الموجود في أعلى فاتورتك، وحاول مرة أخرى."
             )
+
+    async def _followup_with_context(
+        self, text: str, file_number: str, session_context: dict,
+    ) -> dict:
+        """
+        Answer a follow-up question using existing consumption context.
+
+        Called when the user already has their smart meter data loaded and
+        asks about their consumption, appliances, savings, etc. Uses a fast
+        LLM call with the session data as context instead of re-running
+        the full JEPCO analysis pipeline.
+        """
+        projected_kwh = session_context.get('projected_kwh', '?')
+        expected_kwh = session_context.get('expected_kwh', '?')
+        appliances = session_context.get('appliances', [])
+        fn = file_number
+
+        context_block = (
+            f"بيانات المستخدم (رقم الملف: {fn}):\n"
+            f"- الاستهلاك المتوقع نهاية الشهر: {projected_kwh} kWh\n"
+        )
+        if appliances:
+            context_block += f"- الأجهزة المعروفة: {', '.join(appliances)}\n"
+        else:
+            context_block += "- لم يذكر أجهزته بعد\n"
+
+        # Add appliance reference table
+        context_block += (
+            "\nمرجع الأجهزة (kWh/شهر تقريبي):\n"
+            "مكيف: 180, سخان: 120, مجفف: 60, ثلاجة: 45, فرن: 40, "
+            "إضاءة: 30, كمبيوتر: 25, غسالة: 20, تلفزيون: 15, مكواة: 15\n"
+        )
+        context_block += (
+            "\nتعرفة الأردن السكنية:\n"
+            "الشريحة 1: 0-300 kWh × 0.050 JOD\n"
+            "الشريحة 2: 301-600 kWh × 0.100 JOD\n"
+            "الشريحة 3: 600+ kWh × 0.200 JOD\n"
+        )
+
+        try:
+            reply = await self.openai.chat(
+                messages=[{'role': 'user', 'content': text}],
+                system_prompt=(
+                    "أنت نوّار، مساعد كهرباء ذكي في الأردن.\n"
+                    f"{context_block}\n"
+                    "القواعد:\n"
+                    "- أجب على سؤال المستخدم بناءً على بياناته الفعلية\n"
+                    "- إذا سأل 'ايش أكثر شي بستهلك' ولم يذكر أجهزته: اعطِه تقدير "
+                    "بناءً على مستوى استهلاكه واسأله عن أجهزته\n"
+                    "- إذا سأل عن نصائح توفير: أعطِ نصائح محددة بناءً على استهلاكه\n"
+                    "- كلّمه كأنك جاره — بسيط وواضح\n"
+                    "- 3-5 جمل فقط. بدون Markdown أو إيموجي. عربي فقط.\n"
+                    "- لا تبدأ بتحية"
+                ),
+                max_tokens=300,
+                model=FAST_GPT,
+            )
+            return {
+                'response_text': reply,
+                'response_type': 'text',
+                'metadata': {
+                    'intent': 'followup',
+                    'file_number': file_number,
+                    'awaiting': 'appliance_list' if not appliances else None,
+                },
+            }
+        except Exception as e:
+            logger.warning("_followup_with_context AI failed: %s", e)
+            return {
+                'response_text': (
+                    f"استهلاكك المتوقع {projected_kwh} kWh هذا الشهر. "
+                    "عشان أعرف أكثر شي بستهلك عندك، قولي شو الأجهزة الكهربائية اللي عندك "
+                    "(مكيف، سخان، ثلاجة، غسالة...) وراح أحللّك بالتفصيل."
+                ),
+                'response_type': 'text',
+                'metadata': {
+                    'intent': 'followup',
+                    'file_number': file_number,
+                    'awaiting': 'appliance_list',
+                },
+            }
 
     async def _analyze_jepco(
         self, *, text: str, file_number: str, intent: str,
@@ -747,16 +847,14 @@ class LLMService:
                 matched[key] = info
 
         if not matched:
+            # No appliance keywords found — return without re-setting awaiting
+            # so the caller can fall through to normal routing
             return {
-                'response_text': (
-                    "ما قدرت أتعرف على أجهزة من رسالتك. "
-                    "اذكر الأجهزة بالاسم مثل: مكيف، سخان، ثلاجة، غسالة، تلفزيون، إضاءة، كمبيوتر، فرن، مكواة، مجفف."
-                ),
+                'response_text': '',
                 'response_type': 'text',
                 'metadata': {
                     'intent': 'appliance_analysis',
                     'file_number': file_number,
-                    'awaiting': 'appliance_list',
                 },
             }
 
