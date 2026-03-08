@@ -455,9 +455,43 @@
        Mobile overrides — MUST be last so they
        win the cascade over base rules above
        ═══════════════════════════════════════════ */
+    /* ── Mobile tab switcher ── */
+    .mobile-tab-bar {
+        display: none;
+    }
+
     @media (max-width: 768px) {
-        /* Hide page header — chat IS the page */
+        /* Hide page header */
         .page-header { display: none; }
+
+        /* Mobile tab bar — fixed at bottom */
+        .mobile-tab-bar {
+            display: flex;
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(13, 17, 23, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border-subtle);
+            z-index: 950;
+            padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+        .mobile-tab {
+            flex: 1;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 3px;
+            padding: 10px 0;
+            background: none; border: none;
+            color: var(--text-muted);
+            font-family: var(--sans); font-size: 0.6875rem;
+            cursor: pointer; transition: color 0.2s;
+        }
+        .mobile-tab svg { width: 20px; height: 20px; }
+        .mobile-tab.active {
+            color: var(--info);
+        }
+        .mobile-tab:active { opacity: 0.7; }
 
         .app-layout {
             grid-template-columns: 1fr;
@@ -467,17 +501,43 @@
             min-height: 0;
         }
 
-        /* Full-screen chat */
+        /* ── Analysis view (sidebar) = DEFAULT on mobile ── */
+        .app-sidebar {
+            display: flex;
+            position: fixed;
+            top: 48px; left: 0; right: 0;
+            bottom: 52px; /* space for tab bar */
+            background: var(--bg-base);
+            z-index: 900;
+            padding: var(--gap-md);
+            padding-top: max(var(--gap-md), env(safe-area-inset-top));
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .app-sidebar.mobile-hidden {
+            display: none;
+        }
+
+        /* ── Chat view = hidden by default on mobile ── */
         .chat-container {
             border-radius: 0;
             border: none;
             height: 100%;
             box-shadow: none;
+            display: none;
+        }
+        .chat-container.mobile-visible {
+            display: flex;
         }
         .chat-container::before { display: none; }
 
+        /* Hide old sidebar toggle — replaced by tab bar */
+        .mobile-sidebar-toggle { display: none !important; }
+        .sidebar-close-btn { display: none !important; }
+
         .chat-messages {
             padding: var(--gap-md);
+            padding-bottom: 60px; /* space for tab bar */
             gap: var(--gap-md);
             -webkit-overflow-scrolling: touch;
         }
@@ -491,11 +551,9 @@
             width: 28px; height: 28px;
             font-size: 0.5rem;
         }
-        .msg-bubble-title {
-            font-size: 1rem;
-        }
+        .msg-bubble-title { font-size: 1rem; }
 
-        /* Capability chips: single column for full readable text */
+        /* Capability chips */
         .capabilities {
             grid-template-columns: 1fr;
             gap: 8px;
@@ -505,96 +563,43 @@
             font-size: 0.9375rem;
             min-height: 48px;
         }
-        .cap-icon {
-            width: 20px; height: 20px;
-        }
+        .cap-icon { width: 20px; height: 20px; }
 
-        /* Chat input: mobile keyboard-friendly */
+        /* Chat input */
         .chat-input-wrap {
             padding: var(--gap-sm) var(--gap-md);
-            padding-bottom: max(var(--gap-sm), env(safe-area-inset-bottom));
+            padding-bottom: max(56px, calc(52px + env(safe-area-inset-bottom)));
         }
         .chat-input-bar {
             border-radius: var(--radius-lg);
             padding: 4px;
         }
-        .chat-input {
-            font-size: 1rem;
-            padding: 10px 12px;
-        }
-        .input-btn {
-            width: 44px; height: 44px;
-            border-radius: var(--radius-md);
-        }
+        .chat-input { font-size: 1rem; padding: 10px 12px; }
+        .input-btn { width: 44px; height: 44px; border-radius: var(--radius-md); }
         .input-btn svg { width: 20px; height: 20px; }
 
-        /* Chat header: clean single row */
+        /* Chat header */
         .chat-header {
             padding: 8px var(--gap-md);
-            padding-top: max(8px, env(safe-area-inset-top));
             gap: var(--gap-sm);
         }
-        .chat-header-title {
-            font-size: 0.875rem;
-        }
-        .chat-header > div:last-child {
-            gap: 6px;
-        }
-        /* Hide "new chat" link on mobile */
-        .chat-header > div:last-child > a[href*="consumer"] {
-            display: none;
-        }
-        /* Hide READY badge on mobile */
+        .chat-header-title { font-size: 0.875rem; }
+        .chat-header > div:last-child { gap: 6px; }
+        .chat-header > div:last-child > a[href*="consumer"] { display: none; }
         .panel-badge { display: none; }
 
-        /* TTS toggle: icon-only on mobile */
-        .tts-toggle {
-            padding: 8px;
-            min-height: 44px;
-            font-size: 0;
-        }
+        /* TTS toggle */
+        .tts-toggle { padding: 8px; min-height: 44px; font-size: 0; }
         .tts-toggle svg { width: 18px; height: 18px; }
-        .tts-play-btn {
-            padding: 8px 14px;
-            min-height: 44px;
-            font-size: 0.75rem;
-        }
-
-        /* Sidebar: full-screen overlay with smooth transition */
-        .app-sidebar {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: var(--bg-base);
-            z-index: 900;
-            padding: var(--gap-md);
-            padding-top: max(var(--gap-lg), env(safe-area-inset-top));
-            padding-bottom: max(var(--gap-lg), env(safe-area-inset-bottom));
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-        .app-sidebar.mobile-open {
-            display: flex;
-        }
-
-        /* Show sidebar toggle button */
-        .mobile-sidebar-toggle { display: flex; }
+        .tts-play-btn { padding: 8px 14px; min-height: 44px; font-size: 0.75rem; }
 
         /* Upload bar */
-        .upload-bar {
-            font-size: 0.75rem;
-            padding: 10px var(--gap-md);
-            z-index: 10;
-        }
+        .upload-bar { font-size: 0.75rem; padding: 10px var(--gap-md); z-index: 10; }
 
         /* Quick action buttons */
-        .qa {
-            padding: 14px;
-            min-height: 48px;
-            font-size: 0.875rem;
-        }
+        .qa { padding: 14px; min-height: 48px; font-size: 0.875rem; }
 
-        /* Sidebar labels — bump sizes for readability */
+        /* Sidebar labels — readable sizes */
         .s-card-head { font-size: 0.75rem; }
         .sm-val { font-size: 1.125rem; }
         .sm-lbl { font-size: 0.625rem; }
@@ -606,53 +611,28 @@
         .sm-cost-day-lbl { font-size: 0.625rem; }
         .sm-cost-day-trend { font-size: 0.6875rem; }
         .t-tick { font-size: 0.625rem; }
-        .esf-row { font-size: 0.625rem; }
-        .energy-score-label { font-size: 0.8125rem; }
-        .energy-score-num { font-size: 1.5rem; }
-        .energy-score-ring { width: 76px; height: 76px; }
-        .energy-score-ring svg { width: 76px; height: 76px; }
 
-        /* Prevent horizontal overflow */
-        .chat-messages,
-        .s-card-body,
-        .msg-bubble {
-            overflow-x: hidden;
-            overflow-wrap: break-word;
-            word-break: break-word;
+        /* Overflow */
+        .chat-messages, .s-card-body, .msg-bubble {
+            overflow-x: hidden; overflow-wrap: break-word; word-break: break-word;
         }
 
-        /* Touch feedback on all interactive elements */
-        .input-btn:active,
-        .cap-chip:active,
-        .qa:active,
-        .mobile-sidebar-toggle:active,
-        .tts-toggle:active,
-        .tts-play-btn:active {
-            transform: scale(0.95);
-            opacity: 0.8;
+        /* Touch feedback */
+        .input-btn:active, .cap-chip:active, .qa:active,
+        .mobile-tab:active, .tts-toggle:active, .tts-play-btn:active {
+            transform: scale(0.95); opacity: 0.8;
             transition: transform 0.1s, opacity 0.1s;
         }
 
-        /* Prevent pull-to-refresh on chat scroll */
-        .chat-messages {
-            overscroll-behavior: contain;
-        }
-
-        /* Smooth scrolling */
+        .chat-messages { overscroll-behavior: contain; }
         * { -webkit-tap-highlight-color: transparent; }
     }
 
     /* Extra small phones (≤480px) */
     @media (max-width: 480px) {
-        .msg-bubble {
-            padding: 10px 14px;
-            font-size: 0.875rem;
-        }
+        .msg-bubble { padding: 10px 14px; font-size: 0.875rem; }
         .chat-messages { padding: 8px; }
         .cap-chip { font-size: 0.875rem; padding: 12px 14px; }
-        .energy-score-ring { width: 64px; height: 64px; }
-        .energy-score-ring svg { width: 64px; height: 64px; }
-        .energy-score-num { font-size: 1.25rem; }
     }
 </style>
 {% endblock %}
@@ -792,6 +772,18 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- Mobile tab bar -->
+<div class="mobile-tab-bar" id="mobile-tab-bar">
+    <button class="mobile-tab active" id="tab-analysis" data-view="analysis">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        التحليل
+    </button>
+    <button class="mobile-tab" id="tab-chat" data-view="chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        المحادثة
+    </button>
 </div>
 {% endblock %}
 
@@ -1435,24 +1427,31 @@
     /* Initial load — use stored file number if available */
     if (lastFileNumber) loadSmartMeter(lastFileNumber);
 
-    /* ── Mobile sidebar toggle ── */
-    var sidebarToggle = document.getElementById('mobile-sidebar-toggle');
-    var sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+    /* ── Mobile tab navigation ── */
+    var tabAnalysis = document.getElementById('tab-analysis');
+    var tabChat = document.getElementById('tab-chat');
     var sidebar = document.querySelector('.app-sidebar');
+    var chatContainer = document.querySelector('.chat-container');
 
-    function toggleSidebar() {
-        if (!sidebar) return;
-        var isOpen = sidebar.classList.toggle('mobile-open');
-        if (sidebarCloseBtn) sidebarCloseBtn.style.display = isOpen ? 'block' : 'none';
-    }
-    function closeSidebar() {
-        if (!sidebar) return;
-        sidebar.classList.remove('mobile-open');
-        if (sidebarCloseBtn) sidebarCloseBtn.style.display = 'none';
+    function switchToView(view) {
+        if (!sidebar || !chatContainer) return;
+        if (view === 'chat') {
+            sidebar.classList.add('mobile-hidden');
+            chatContainer.classList.add('mobile-visible');
+            if (tabAnalysis) tabAnalysis.classList.remove('active');
+            if (tabChat) tabChat.classList.add('active');
+            // Scroll chat to bottom
+            if (msgs) msgs.scrollTop = msgs.scrollHeight;
+        } else {
+            sidebar.classList.remove('mobile-hidden');
+            chatContainer.classList.remove('mobile-visible');
+            if (tabAnalysis) tabAnalysis.classList.add('active');
+            if (tabChat) tabChat.classList.remove('active');
+        }
     }
 
-    if (sidebarToggle) sidebarToggle.addEventListener('click', toggleSidebar);
-    if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', closeSidebar);
+    if (tabAnalysis) tabAnalysis.addEventListener('click', function() { switchToView('analysis'); });
+    if (tabChat) tabChat.addEventListener('click', function() { switchToView('chat'); });
 })();
 </script>
 {% endblock %}
