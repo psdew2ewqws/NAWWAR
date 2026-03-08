@@ -33,6 +33,15 @@ CREW_INTENTS = {'billing', 'savings', 'operations'}
 # Regex for JEPCO file numbers (13 digits starting with 0)
 FILE_NUMBER_RE = re.compile(r'\b(0\d{12})\b')
 
+# Eastern Arabic-Indic numerals → Western digits
+_EASTERN_ARABIC_MAP = str.maketrans('٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹', '01234567890123456789')
+
+
+def normalize_arabic_numerals(text: str) -> str:
+    """Convert Eastern Arabic (٠-٩) and Extended Arabic-Indic (۰-۹) numerals to Western (0-9)."""
+    return text.translate(_EASTERN_ARABIC_MAP)
+
+
 # Arabic spoken number words → digit mapping
 # Handles all common variants and dialectal forms
 _AR_WORD_TO_DIGIT = {
@@ -272,8 +281,9 @@ class LLMService:
 
         intent = await self.rag.classify_intent(text=text)
 
-        # Convert Arabic spoken numbers → digits (e.g. "صفر صفر ثلاثة" → "003")
-        text_normalized = arabic_words_to_digits(text)
+        # Normalize Eastern Arabic numerals (٠١٢→012) and spoken words (صفر→0)
+        text_normalized = normalize_arabic_numerals(text)
+        text_normalized = arabic_words_to_digits(text_normalized)
 
         # Check for JEPCO file number in message text
         file_match = FILE_NUMBER_RE.search(text_normalized)
