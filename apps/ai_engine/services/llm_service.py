@@ -214,9 +214,15 @@ class LLMService:
         start = time.monotonic()
 
         if message_type == 'image':
-            result = await self._handle_image(content)
+            result = await self._handle_image(
+                content, file_number=file_number,
+                session_context=session_context,
+            )
         elif message_type == 'audio':
-            result = await self._handle_audio(content)
+            result = await self._handle_audio(
+                content, file_number=file_number,
+                session_context=session_context,
+            )
         else:
             result = await self._handle_text(
                 content, file_number=file_number, jepco_data=jepco_data,
@@ -1245,18 +1251,25 @@ class LLMService:
 
         return None
 
-    async def _handle_image(self, image_data: bytes) -> dict:
+    async def _handle_image(
+        self, image_data: bytes, *,
+        file_number: str = None,
+        session_context: dict | None = None,
+    ) -> dict:
         """
         Route image through bill scanning → extract file number → fetch all JEPCO data.
 
         The primary goal is extracting the 13-digit file number (رقم المرجع).
         Once we have it, we fetch real-time data from JEPCO and return a full
         personalized analysis — much richer than what's printed on the paper.
+
+        Context-aware: if file_number is already known from the session,
+        it will be used as a fallback if OCR can't extract one.
         """
         scan_result = await vision_service.scan_bill(image_data=image_data)
 
         # Try to extract the file number from the OCR result
-        file_number = None
+        extracted_file = None
         raw_ocr = scan_result.get('raw_ocr', {})
 
         # Check multiple possible fields where file number might appear
@@ -1268,32 +1281,40 @@ class LLMService:
                 # Check if it matches JEPCO file number pattern
                 match = re.search(r'(0\d{12})', cleaned)
                 if match:
-                    file_number = match.group(1)
+                    extracted_file = match.group(1)
                     break
 
         # Also search the full OCR text for any 13-digit number starting with 0
-        if not file_number:
+        if not extracted_file:
             all_text = json.dumps(raw_ocr, ensure_ascii=False) if raw_ocr else ''
             match = FILE_NUMBER_RE.search(all_text)
             if match:
-                file_number = match.group(1)
+                extracted_file = match.group(1)
 
-        # If we found a file number, fetch ALL live data from JEPCO
-        if file_number:
-            logger.info("Bill photo: extracted file number %s, fetching live data", file_number)
+        # Use OCR-extracted number, or fall back to session file number
+        effective_file = extracted_file or file_number
+
+        # If we have a file number (from OCR or session), fetch ALL live data
+        if effective_file:
+            source = 'bill_photo_scan' if extracted_file else 'session_context'
+            logger.info(
+                "Bill photo: file number %s (source=%s), fetching live data",
+                effective_file, source,
+            )
             jepco_result = await self._analyze_jepco(
-                text=f'حلل فاتورتي رقم {file_number}',
-                file_number=file_number,
+                text=f'حلل فاتورتي رقم {effective_file}',
+                file_number=effective_file,
                 intent='billing',
                 jepco_data=None,  # Force fresh fetch from API
             )
             if jepco_result:
-                # Prepend a note that we extracted the number from the photo
-                jepco_result['response_text'] = (
-                    f"تم التعرف على رقم الملف من صورة الفاتورة: {file_number}\n\n"
-                    + jepco_result['response_text']
+                prefix = (
+                    f"تم التعرف على رقم الملف من صورة الفاتورة: {effective_file}"
+                    if extracted_file
+                    else f"تم تحليل الصورة مع بيانات حسابك: {effective_file}"
                 )
-                jepco_result['metadata']['source'] = 'bill_photo_scan'
+                jepco_result['response_text'] = prefix + "\n\n" + jepco_result['response_text']
+                jepco_result['metadata']['source'] = source
                 jepco_result['metadata']['scan_result'] = scan_result
                 return jepco_result
 
@@ -1308,7 +1329,7 @@ class LLMService:
             summary_parts.append(f"المبلغ: {jod:.3f} دينار")
 
         response_text = "تم تحليل الفاتورة.\n" + "\n".join(summary_parts)
-        if not file_number:
+        if not effective_file:
             response_text += (
                 "\n\nلم أتمكن من قراءة رقم المرجع من الصورة.\n"
                 "حاول تصوير الفاتورة بوضوح أكثر، أو اكتب رقم المرجع يدوياً "
@@ -1320,13 +1341,17 @@ class LLMService:
             'response_type': 'bill_scan',
             'metadata': {
                 'scan_result': scan_result,
-                'file_number': file_number,
-                'awaiting': 'file_number' if not file_number else None,
+                'file_number': effective_file,
+                'awaiting': 'file_number' if not effective_file else None,
             },
         }
 
-    async def _handle_audio(self, audio_data: bytes) -> dict:
-        """Transcribe audio, then route the text through the text pipeline."""
+    async def _handle_audio(
+        self, audio_data: bytes, *,
+        file_number: str = None,
+        session_context: dict | None = None,
+    ) -> dict:
+        """Transcribe audio, then route through the text pipeline with full context."""
         transcript = await self.openai.transcribe_audio(audio_data)
 
         logger.info("Audio transcribed: length=%d", len(transcript))
@@ -1335,8 +1360,11 @@ class LLMService:
         normalized = arabic_words_to_digits(transcript)
         logger.info("Audio normalized: %s", normalized[:100])
 
-        # Now route the transcribed text
-        text_result = await self._handle_text(normalized)
+        # Route with full session context (file_number, appliances, etc.)
+        text_result = await self._handle_text(
+            normalized, file_number=file_number,
+            session_context=session_context,
+        )
 
         text_result['response_type'] = 'transcription'
         text_result['metadata']['transcript'] = transcript

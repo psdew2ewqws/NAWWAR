@@ -365,22 +365,67 @@ async def api_chat_scan(request):
             if not image_file:
                 return JsonResponse({'error': 'No image file provided'}, status=400)
             image_data = image_file.read()
+            session_key = request.POST.get('session_key', '').strip()
+            file_number = request.POST.get('file_number', '').strip() or None
         else:
             body = json.loads(request.body)
             b64_image = body.get('image', '')
             if not b64_image:
                 return JsonResponse({'error': 'No image data provided'}, status=400)
             image_data = base64.b64decode(b64_image)
+            session_key = body.get('session_key', '').strip()
+            file_number = body.get('file_number', '').strip() or None
+
+        # Load session context (file number, appliances, etc.)
+        from apps.consumer.models.conversation import ConversationSession, Message
+        from asgiref.sync import sync_to_async
+        session = None
+        if session_key:
+            session = await sync_to_async(
+                ConversationSession.objects.filter(session_key=session_key).first
+            )()
+
+        if not file_number and session and session.context:
+            file_number = session.context.get('file_number') or None
+
+        session_ctx = {}
+        if session and session.context:
+            session_ctx = session.context
 
         from apps.ai_engine.services.llm_service import LLMService
         svc = LLMService()
-        result = await svc.route_request(message_type='image', content=image_data)
+        result = await svc.route_request(
+            message_type='image', content=image_data,
+            file_number=file_number, session_context=session_ctx,
+        )
 
-        return JsonResponse({
+        response = {
             'reply': result['response_text'],
             'scan_result': result['metadata'].get('scan_result', {}),
             'processing_ms': result['metadata'].get('processing_ms', 0),
-        })
+        }
+        if result['metadata'].get('file_number'):
+            response['file_number'] = result['metadata']['file_number']
+
+        # Save messages and persist context in session
+        if session:
+            await sync_to_async(Message.objects.create)(
+                session=session, role='user', content='[صورة فاتورة]',
+                message_type='image',
+            )
+            await sync_to_async(Message.objects.create)(
+                session=session, role='assistant', content=result['response_text'],
+                processing_time_ms=result['metadata'].get('processing_ms', 0),
+            )
+            returned_file = result['metadata'].get('file_number')
+            if returned_file:
+                ctx = session.context or {}
+                ctx['file_number'] = returned_file
+                ctx.pop('awaiting', None)
+                session.context = ctx
+                await sync_to_async(session.save)(update_fields=['context'])
+
+        return JsonResponse(response)
 
     except Exception as e:
         logger.exception("api_chat_scan error: %s", e)

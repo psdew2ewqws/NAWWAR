@@ -536,6 +536,19 @@
             overflow-x: hidden;
             word-break: break-word;
         }
+
+        /* Touch feedback */
+        .input-btn:active,
+        .cap-chip:active,
+        .qa:active {
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+
+        /* Prevent pull-to-refresh on chat scroll */
+        .chat-messages {
+            overscroll-behavior: contain;
+        }
     }
 </style>
 {% endblock %}

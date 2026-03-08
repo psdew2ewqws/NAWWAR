@@ -4,15 +4,17 @@ WhatsApp message router — classifies intent and dispatches to AI services.
 Routes incoming WhatsApp messages to the appropriate handler based on
 message type (text, image, audio, location) and detected intent.
 
-Text messages are routed through LLMService (same as web chat) which
-provides live JEPCO data lookup, file number detection, and multi-model
-analysis — not just RAG knowledge base Q&A.
+All message types are context-aware: the router loads the conversation
+session (by phone number) and passes file_number + session_context to
+LLMService, ensuring continuity across text, voice, and image messages.
 """
 import logging
 
+from asgiref.sync import sync_to_async
+
 from apps.ai_engine.services.llm_service import LLMService
 from apps.ai_engine.services.voice_service import VoiceService
-from apps.ai_engine.services import vision_service
+from apps.consumer.models.conversation import ConversationSession, Message
 from apps.whatsapp.clients.whatsapp_client import WhatsAppClient
 
 logger = logging.getLogger(__name__)
@@ -23,17 +25,63 @@ class MessageRouter:
     Routes incoming WhatsApp messages to the appropriate service handler
     based on message type and detected intent.
 
-    Message types handled:
-    - text: LLMService (file number detection, JEPCO live data, RAG).
-    - image: Route to VisionService for bill scanning.
-    - audio: Route to VoiceService for transcription, then re-route the text.
-    - location: Acknowledge and suggest nearest JEPCO office.
+    All handlers load session context (file_number, appliances, etc.) from
+    the ConversationSession so the AI remembers previous conversation turns.
     """
 
     def __init__(self):
         self.llm = LLMService()
         self.voice = VoiceService()
         self.wa_client = WhatsAppClient()
+
+    async def _get_session(self, phone: str) -> ConversationSession | None:
+        """Load or create a WhatsApp conversation session."""
+        if not phone:
+            return None
+        session = await sync_to_async(
+            ConversationSession.objects.filter(
+                phone_number=phone, platform='whatsapp', is_active=True,
+            ).first
+        )()
+        if not session:
+            session = await sync_to_async(ConversationSession.objects.create)(
+                phone_number=phone, platform='whatsapp',
+            )
+        return session
+
+    async def _save_and_update_ctx(
+        self, session, user_content: str, result: dict,
+        msg_type: str = 'text',
+    ):
+        """Save user + assistant messages and persist context updates."""
+        if not session:
+            return
+        await sync_to_async(Message.objects.create)(
+            session=session, role='user', content=user_content,
+            message_type=msg_type,
+        )
+        await sync_to_async(Message.objects.create)(
+            session=session, role='assistant',
+            content=result.get('response_text', ''),
+            processing_time_ms=result.get('metadata', {}).get('processing_ms', 0),
+        )
+        # Persist file_number, appliances, projected_kwh in session context
+        meta = result.get('metadata', {})
+        ctx = session.context or {}
+        changed = False
+        for key in ('file_number', 'appliances', 'expected_kwh', 'projected_kwh'):
+            if meta.get(key):
+                ctx[key] = meta[key]
+                changed = True
+        if meta.get('awaiting'):
+            ctx['awaiting'] = meta['awaiting']
+            changed = True
+        elif 'awaiting' in ctx:
+            ctx.pop('awaiting')
+            changed = True
+        if changed:
+            session.context = ctx
+            await sync_to_async(session.save)(update_fields=['context'])
 
     async def route_message(self, message_data: dict) -> dict:
         """
@@ -61,24 +109,22 @@ class MessageRouter:
             return await self._handle_text(message_data)
 
     async def _handle_text(self, message_data: dict) -> dict:
-        """
-        Route text through LLMService — same pipeline as the web chat.
-
-        LLMService handles:
-        - File number detection (13-digit JEPCO numbers)
-        - Live JEPCO smart meter data lookup
-        - Multi-model analysis (GPT-4o + Claude)
-        - CrewAI for complex queries
-        - RAG for general knowledge Q&A
-        """
+        """Route text through LLMService with full session context."""
         text = message_data.get('text', {}).get('body', '')
+        phone = message_data.get('from', '')
 
-        logger.info("Routing text to LLMService: %s", text[:80])
+        session = await self._get_session(phone)
+        ctx = (session.context or {}) if session else {}
+        file_number = ctx.get('file_number')
 
         result = await self.llm.route_request(
             message_type='text',
             content=text,
+            file_number=file_number,
+            session_context=ctx,
         )
+
+        await self._save_and_update_ctx(session, text, result)
 
         return {
             'response_type': 'text',
@@ -86,14 +132,10 @@ class MessageRouter:
         }
 
     async def _handle_image(self, message_data: dict) -> dict:
-        """
-        Route image messages to the bill scanning pipeline.
-
-        Downloads the image from WhatsApp, passes to VisionService,
-        and returns the structured analysis.
-        """
+        """Route image through LLMService bill scan with session context."""
         image_info = message_data.get('image', {})
         media_id = image_info.get('id', '')
+        phone = message_data.get('from', '')
 
         if not media_id:
             return {
@@ -102,45 +144,27 @@ class MessageRouter:
             }
 
         try:
-            # Download image from WhatsApp
             image_data = await self.wa_client.download_media(media_id)
 
-            # Scan the bill image
-            mime_type = image_info.get('mime_type', 'image/jpeg')
-            scan_result = await vision_service.scan_bill(
-                image_data=image_data,
-                mime_type=mime_type,
+            session = await self._get_session(phone)
+            ctx = (session.context or {}) if session else {}
+            file_number = ctx.get('file_number')
+
+            # Route through LLMService (extracts file number + fetches JEPCO)
+            result = await self.llm.route_request(
+                message_type='image',
+                content=image_data,
+                file_number=file_number,
+                session_context=ctx,
             )
 
-            # Build a user-friendly Arabic response
-            parts = ["تم تحليل الفاتورة بنجاح ✅\n"]
-
-            if scan_result.get('subscriber_number'):
-                parts.append(f"رقم الاشتراك: {scan_result['subscriber_number']}")
-            if scan_result.get('billing_period_start') and scan_result.get('billing_period_end'):
-                parts.append(
-                    f"فترة الفاتورة: {scan_result['billing_period_start']} - {scan_result['billing_period_end']}"
-                )
-            if scan_result.get('total_kwh'):
-                parts.append(f"الاستهلاك: {scan_result['total_kwh']} ك.و.س")
-            if scan_result.get('total_amount_fils'):
-                jod = scan_result['total_amount_fils'] / 1000
-                parts.append(f"المبلغ الإجمالي: {jod:.3f} دينار")
-            if scan_result.get('previous_reading') and scan_result.get('current_reading'):
-                parts.append(
-                    f"القراءة: {scan_result['previous_reading']} → {scan_result['current_reading']}"
-                )
-
-            # Add line items if available
-            line_items = scan_result.get('line_items', [])
-            if line_items:
-                parts.append("\nتفاصيل الشرائح:")
-                for item in line_items:
-                    parts.append(f"  {item.get('description_ar', item.get('description', ''))}")
+            await self._save_and_update_ctx(
+                session, '[صورة فاتورة]', result, msg_type='image',
+            )
 
             return {
                 'response_type': 'text',
-                'content': '\n'.join(parts),
+                'content': result.get('response_text', ''),
             }
 
         except Exception as e:
@@ -151,14 +175,10 @@ class MessageRouter:
             }
 
     async def _handle_audio(self, message_data: dict) -> dict:
-        """
-        Route audio messages through the full voice pipeline.
-
-        Downloads audio from WhatsApp -> Whisper transcription ->
-        intent classification -> RAG answer -> TTS synthesis.
-        """
+        """Route audio through transcription then LLMService with context."""
         audio_info = message_data.get('audio', {})
         media_id = audio_info.get('id', '')
+        phone = message_data.get('from', '')
 
         if not media_id:
             return {
@@ -167,17 +187,29 @@ class MessageRouter:
             }
 
         try:
-            # Download audio from WhatsApp
             audio_data = await self.wa_client.download_media(media_id)
 
-            # Run the full voice pipeline: transcribe -> classify -> answer -> synthesize
-            result = await self.voice.process_voice_message(audio_data=audio_data)
+            session = await self._get_session(phone)
+            ctx = (session.context or {}) if session else {}
+            file_number = ctx.get('file_number')
 
-            transcript = result.get('transcript', '')
+            # Route through LLMService audio handler (transcribe → text pipeline)
+            result = await self.llm.route_request(
+                message_type='audio',
+                content=audio_data,
+                file_number=file_number,
+                session_context=ctx,
+            )
+
+            transcript = result.get('metadata', {}).get('transcript', '')
             response_text = result.get('response_text', '')
 
-            # Prepend the transcript so the user sees what was understood
-            content = f"📝 فهمت: \"{transcript}\"\n\n{response_text}"
+            await self._save_and_update_ctx(
+                session, transcript or '[رسالة صوتية]', result, msg_type='voice',
+            )
+
+            # Prepend transcript so user sees what was understood
+            content = f"فهمت: \"{transcript}\"\n\n{response_text}" if transcript else response_text
 
             return {
                 'response_type': 'text',
@@ -204,8 +236,7 @@ class MessageRouter:
             'content': (
                 'شكراً لمشاركة موقعك. يمكنك زيارة أقرب فرع لشركة الكهرباء.\n\n'
                 'للاستفسارات العاجلة:\n'
-                '📞 هاتف الطوارئ: 1111\n'
-                '📞 خدمة العملاء: 06-5300-666'
+                'هاتف الطوارئ: 1111\n'
+                'خدمة العملاء: 06-5300-666'
             ),
         }
-

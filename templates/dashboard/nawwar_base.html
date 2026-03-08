@@ -2,11 +2,15 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#07090f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>{{ page_title|default:"نوّر — Nawwar" }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://mobile.jepco.com.jo" crossorigin>
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         /* ════════════════════════════════════════════════════════════════
            Nawwar Industrial Design System
@@ -291,6 +295,15 @@
             }
             .status-indicator { font-size: 0.5625rem; }
             .topbar-clock { display: none; }
+
+            /* Bump small labels for mobile readability */
+            .s-lbl,
+            .panel-badge,
+            .status-indicator,
+            .kpi-badge,
+            .kpi-sub {
+                font-size: 0.625rem;
+            }
         }
 
         /* ─── Panel ─── */
