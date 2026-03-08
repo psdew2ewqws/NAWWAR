@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -810,6 +811,39 @@
         .footer a { color: var(--text-secondary); text-decoration: none; }
         .footer a:hover { color: var(--accent); }
 
+        .powered-by {
+            margin-top: var(--gap-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 0.625rem;
+            color: var(--text-muted);
+            letter-spacing: 0.3px;
+        }
+
+        .nexara-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-secondary) !important;
+            font-weight: 600;
+            font-size: 0.6875rem;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+        }
+
+        .nexara-link:hover {
+            color: var(--text-bright) !important;
+        }
+
+        .nexara-logo {
+            height: 18px;
+            width: 18px;
+            border-radius: 3px;
+            object-fit: cover;
+        }
+
         /* ─── Consumer-specific ─── */
         .upload-zone {
             border: 2px dashed var(--border-default);
@@ -982,6 +1016,13 @@
         نوّر (Nawwar) — منصة الذكاء الاصطناعي لتوليد الطاقة
         &nbsp;&bull;&nbsp;
         AI-Powered Energy Generation Platform
+        <div class="powered-by">
+            <span>Powered by</span>
+            <a href="https://Nexaratech.io" target="_blank" rel="noopener" class="nexara-link">
+                <img src="{% static 'images/nexara-logo.jpeg' %}" alt="Nexara" class="nexara-logo">
+                <span>NEXARA</span>
+            </a>
+        </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

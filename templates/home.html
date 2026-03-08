@@ -120,6 +120,9 @@ box-shadow:0 0 12px rgba(0,255,65,.08)}
 display:flex;align-items:center;gap:.4rem}
 .ftr-clock .dot{width:5px;height:5px;background:#ff2020;border-radius:50%;
 animation:pulse-rec 1s steps(1) infinite}
+.ftr-nexara{font-size:.6rem;color:#0a3a0a;margin-top:.3rem}
+.ftr-nexara a{color:#00ff41;text-decoration:none;opacity:.6;transition:opacity .2s;display:inline-flex;align-items:center;gap:4px}
+.ftr-nexara a:hover{opacity:1}
 
 /* ── MOBILE ── */
 @media(max-width:900px){
@@ -206,6 +209,7 @@ animation:pulse-rec 1s steps(1) infinite}
       <a href="/nawwar/consumer/">[ CONSUMER ]</a>
     </div>
     <div class="ftr-clock"><span class="dot"></span><span id="clock">--:--:--</span></div>
+    <div class="ftr-nexara"><a href="https://Nexaratech.io" target="_blank" rel="noopener"><img src="{% static 'images/nexara-logo.jpeg' %}" alt="Nexara" style="height:16px;width:16px;border-radius:2px;object-fit:cover;vertical-align:middle;margin-left:4px"> Powered by NEXARA</a></div>
   </div>
 
 </div>
