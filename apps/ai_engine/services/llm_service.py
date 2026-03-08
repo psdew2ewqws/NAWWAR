@@ -87,12 +87,14 @@ def arabic_words_to_digits(text: str) -> str:
             digits = []
 
     for word in words:
+        # Strip trailing punctuation that STT may add (e.g. "سبعة." → "سبعة")
+        clean = word.rstrip('.,،؟?!؛:')
         # Try exact match first
-        if word in _AR_WORD_TO_DIGIT:
-            digits.append(_AR_WORD_TO_DIGIT[word])
+        if clean in _AR_WORD_TO_DIGIT:
+            digits.append(_AR_WORD_TO_DIGIT[clean])
         # Strip leading و (and) — common: "وثلاثة" → "ثلاثة", but NOT "واحد"
-        elif word.startswith('و') and len(word) > 2 and word[1:] in _AR_WORD_TO_DIGIT:
-            digits.append(_AR_WORD_TO_DIGIT[word[1:]])
+        elif clean.startswith('و') and len(clean) > 2 and clean[1:] in _AR_WORD_TO_DIGIT:
+            digits.append(_AR_WORD_TO_DIGIT[clean[1:]])
         else:
             flush_digits()
             non_digit_buffer.append(word)
