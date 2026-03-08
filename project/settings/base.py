@@ -140,7 +140,7 @@ ANTHROPIC_API_KEY = config('ANTHROPIC_API_KEY', default='')
 # AI Model Configuration
 AI_CONFIG = {
     'VISION_MODEL': 'gpt-4o',
-    'WHISPER_MODEL': 'whisper-1',
+    'WHISPER_MODEL': 'gpt-4o-transcribe',
     'CLAUDE_MODEL': 'claude-sonnet-4-6',
     'EMBEDDING_MODEL': 'text-embedding-3-small',
     'MAX_TOKENS': 4096,
@@ -195,7 +195,7 @@ CHROMADB_PATH = BASE_DIR / 'chromadb_data'
 TTS_CONFIG = {
     'MALE_VOICE': 'ar-JO-TaimurNeural',
     'FEMALE_VOICE': 'ar-JO-SanaNeural',
-    'DEFAULT_VOICE': 'ar-JO-TaimurNeural',
+    'DEFAULT_VOICE': 'ar-JO-SanaNeural',
 }
 
 # CEGCO Plant Configuration

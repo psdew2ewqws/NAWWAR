@@ -33,6 +33,64 @@ CREW_INTENTS = {'billing', 'savings', 'operations'}
 # Regex for JEPCO file numbers (13 digits starting with 0)
 FILE_NUMBER_RE = re.compile(r'\b(0\d{12})\b')
 
+# Arabic spoken number words → digit mapping
+# Handles all common variants and dialectal forms
+_AR_WORD_TO_DIGIT = {
+    'صفر': '0', 'زيرو': '0',
+    'واحد': '1', 'وحدة': '1', 'واحدة': '1',
+    'اثنين': '2', 'اثنان': '2', 'ثنين': '2', 'اتنين': '2', 'تنين': '2',
+    'ثلاثة': '3', 'ثلاث': '3', 'تلاتة': '3', 'تلاته': '3',
+    'أربعة': '4', 'اربعة': '4', 'اربع': '4', 'أربع': '4', 'اربعه': '4',
+    'خمسة': '5', 'خمس': '5', 'خمسه': '5',
+    'ستة': '6', 'ست': '6', 'سته': '6', 'ستّة': '6',
+    'سبعة': '7', 'سبع': '7', 'سبعه': '7',
+    'ثمانية': '8', 'ثماني': '8', 'ثمانيه': '8', 'ثمان': '8', 'تمانية': '8', 'تمانيه': '8',
+    'تسعة': '9', 'تسع': '9', 'تسعه': '9',
+}
+# Build regex: match sequences of Arabic number words (possibly joined by و or spaces)
+_AR_NUM_WORDS = sorted(_AR_WORD_TO_DIGIT.keys(), key=len, reverse=True)
+_AR_NUM_PATTERN = re.compile(
+    r'(?:^|(?<=\s))(' + '|'.join(re.escape(w) for w in _AR_NUM_WORDS) + r')(?:\s+|$)',
+    re.UNICODE,
+)
+
+
+def arabic_words_to_digits(text: str) -> str:
+    """
+    Convert Arabic spoken number words to digit strings.
+
+    Example:
+        "صفر صفر ثلاثة صفر سبعة ثلاثة ثمانية أربعة سبعة اثنين"
+        → "0030738472"
+
+    Returns the original text with number-word sequences replaced by digits.
+    Non-number text is preserved as-is.
+    """
+    words = text.split()
+    digits = []
+    non_digit_buffer = []
+
+    def flush_digits():
+        nonlocal digits, non_digit_buffer
+        if digits:
+            digit_str = ''.join(digits)
+            non_digit_buffer.append(digit_str)
+            digits = []
+
+    for word in words:
+        # Try exact match first
+        if word in _AR_WORD_TO_DIGIT:
+            digits.append(_AR_WORD_TO_DIGIT[word])
+        # Strip leading و (and) — common: "وثلاثة" → "ثلاثة", but NOT "واحد"
+        elif word.startswith('و') and len(word) > 2 and word[1:] in _AR_WORD_TO_DIGIT:
+            digits.append(_AR_WORD_TO_DIGIT[word[1:]])
+        else:
+            flush_digits()
+            non_digit_buffer.append(word)
+
+    flush_digits()
+    return ' '.join(non_digit_buffer)
+
 # Fastest models per provider (benchmarked)
 FAST_CLAUDE = 'claude-haiku-4-5-20251001'     # ~2.5s
 FAST_GPT = 'gpt-4.1-mini'                      # ~1.5s
@@ -206,10 +264,13 @@ class LLMService:
 
         intent = await self.rag.classify_intent(text=text)
 
+        # Convert Arabic spoken numbers → digits (e.g. "صفر صفر ثلاثة" → "003")
+        text_normalized = arabic_words_to_digits(text)
+
         # Check for JEPCO file number in message text
-        file_match = FILE_NUMBER_RE.search(text)
+        file_match = FILE_NUMBER_RE.search(text_normalized)
         # Trigger if: billing/savings/general intent OR the message is just the number
-        is_bare_number = file_match and text.strip() == file_match.group(1)
+        is_bare_number = file_match and text_normalized.strip() == file_match.group(1)
 
         # Use file number from message, or fall back to one from previous turn
         detected_file = file_match.group(1) if file_match else None
@@ -918,11 +979,17 @@ class LLMService:
             bill_details = bills
 
         if bill_details:
+            # Separate unpaid bills
+            unpaid = [
+                b for b in bill_details
+                if b.get('clearingStatus') != 'X'
+            ]
+
+            # Last 3 bills
             lines.append("")
-            lines.append("سجل الفواتير السابقة:")
-            # Detect anomalies in billing history
+            lines.append("آخر 3 فواتير:")
             amounts = []
-            for b in bill_details[:13]:
+            for b in bill_details[:3]:
                 period = b.get('billPeriod', '?')
                 kwh = b.get('ibillingQuantity', b.get('consumptionKWh', '?'))
                 amount = b.get('totalBillAmount', b.get('amountJOD', '?'))
@@ -933,10 +1000,35 @@ class LLMService:
                 except (ValueError, TypeError):
                     pass
 
-            # Anomaly detection: flag bills that are 2x the average
-            if len(amounts) >= 3:
-                avg_kwh = sum(a[1] for a in amounts) / len(amounts)
-                anomalies = [(p, k) for p, k in amounts if k > avg_kwh * 1.8]
+            # Unpaid bills alert
+            if unpaid:
+                lines.append("")
+                lines.append(f"عندك {len(unpaid)} فاتورة غير مدفوعة:")
+                total_unpaid = 0.0
+                for b in unpaid:
+                    period = b.get('billPeriod', '?')
+                    amount = b.get('totalBillAmount', '?')
+                    lines.append(f"  {period}: {amount} دينار")
+                    try:
+                        total_unpaid += float(amount)
+                    except (ValueError, TypeError):
+                        pass
+                if total_unpaid > 0:
+                    lines.append(f"  المجموع المستحق: {total_unpaid:.3f} دينار")
+
+            # Anomaly detection across all bills
+            all_amounts = []
+            for b in bill_details:
+                try:
+                    all_amounts.append(
+                        (b.get('billPeriod', '?'), float(b.get('ibillingQuantity', 0)))
+                    )
+                except (ValueError, TypeError):
+                    pass
+
+            if len(all_amounts) >= 3:
+                avg_kwh = sum(a[1] for a in all_amounts) / len(all_amounts)
+                anomalies = [(p, k) for p, k in all_amounts if k > avg_kwh * 1.8]
                 if anomalies:
                     lines.append("")
                     lines.append("تنبيه — فواتير مرتفعة بشكل غير عادي:")
@@ -1234,13 +1326,17 @@ class LLMService:
         }
 
     async def _handle_audio(self, audio_data: bytes) -> dict:
-        """Transcribe audio, then route the text through RAG."""
+        """Transcribe audio, then route the text through the text pipeline."""
         transcript = await self.openai.transcribe_audio(audio_data)
 
         logger.info("Audio transcribed: length=%d", len(transcript))
 
+        # Convert spoken Arabic numbers → digits before routing
+        normalized = arabic_words_to_digits(transcript)
+        logger.info("Audio normalized: %s", normalized[:100])
+
         # Now route the transcribed text
-        text_result = await self._handle_text(transcript)
+        text_result = await self._handle_text(normalized)
 
         text_result['response_type'] = 'transcription'
         text_result['metadata']['transcript'] = transcript

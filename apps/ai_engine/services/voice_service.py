@@ -89,7 +89,7 @@ class VoiceService:
         try:
             response = await self.openai.client.audio.speech.create(
                 model='tts-1',
-                voice='onyx',
+                voice='nova',
                 input=text[:4096],
                 response_format='mp3',
             )
@@ -97,7 +97,7 @@ class VoiceService:
 
             latency = int((time.monotonic() - start) * 1000)
             await AILog.objects.acreate(
-                model_name='tts-1:onyx',
+                model_name='tts-1:nova',
                 provider=AILog.Provider.OPENAI,
                 latency_ms=latency,
                 task_type=AILog.TaskType.TTS,
@@ -110,7 +110,7 @@ class VoiceService:
             latency = int((time.monotonic() - start) * 1000)
             logger.error("VoiceService.synthesize failed (both providers): %s", e)
             await AILog.objects.acreate(
-                model_name='tts-1:onyx',
+                model_name='tts-1:nova',
                 provider=AILog.Provider.OPENAI,
                 latency_ms=latency,
                 task_type=AILog.TaskType.TTS,
