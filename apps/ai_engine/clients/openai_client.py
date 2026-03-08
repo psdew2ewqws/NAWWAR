@@ -151,12 +151,14 @@ class OpenAIClient:
             )
             raise
 
-    async def transcribe_audio(self, audio_data: bytes) -> str:
+    async def transcribe_audio(self, audio_data: bytes, *, filename: str = 'audio.webm') -> str:
         """
-        Transcribe audio to text using Whisper.
+        Transcribe audio to text using Whisper / gpt-4o-transcribe.
 
         Args:
-            audio_data: Raw audio bytes (OGG/WAV/MP3).
+            audio_data: Raw audio bytes.
+            filename: Original filename with correct extension (e.g. 'recording.webm').
+                      gpt-4o-transcribe is strict about format detection from the extension.
 
         Returns:
             Transcribed text string.
@@ -167,7 +169,7 @@ class OpenAIClient:
 
         try:
             audio_file = io.BytesIO(audio_data)
-            audio_file.name = 'audio.ogg'
+            audio_file.name = filename
 
             model = self.config['WHISPER_MODEL']
             kwargs = {

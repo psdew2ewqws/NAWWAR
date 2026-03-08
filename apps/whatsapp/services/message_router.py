@@ -194,11 +194,13 @@ class MessageRouter:
             file_number = ctx.get('file_number')
 
             # Route through LLMService audio handler (transcribe → text pipeline)
+            # WhatsApp voice notes are OGG/opus format
             result = await self.llm.route_request(
                 message_type='audio',
                 content=audio_data,
                 file_number=file_number,
                 session_context=ctx,
+                audio_filename='voice_note.ogg',
             )
 
             transcript = result.get('metadata', {}).get('transcript', '')

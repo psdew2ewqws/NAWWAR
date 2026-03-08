@@ -445,6 +445,8 @@ async def api_chat_voice(request):
             return JsonResponse({'error': 'No audio file provided'}, status=400)
 
         audio_data = audio_file.read()
+        # Preserve original filename for format detection (browser sends .webm)
+        audio_filename = audio_file.name or 'recording.webm'
 
         # Read session/file context from FormData (sent by frontend)
         session_key = request.POST.get('session_key', '').strip()
@@ -453,7 +455,7 @@ async def api_chat_voice(request):
         # Step 1: Transcribe audio → text
         from apps.ai_engine.services.voice_service import VoiceService
         voice_svc = VoiceService()
-        transcript = await voice_svc.transcribe(audio_data=audio_data)
+        transcript = await voice_svc.transcribe(audio_data=audio_data, filename=audio_filename)
 
         if not transcript or not transcript.strip():
             return JsonResponse({

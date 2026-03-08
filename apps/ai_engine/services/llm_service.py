@@ -182,6 +182,7 @@ class LLMService:
         file_number: str = None,
         jepco_data: dict = None,
         session_context: dict | None = None,
+        audio_filename: str = 'audio.webm',
     ) -> dict:
         """
         Route a request to the appropriate AI service.
@@ -222,6 +223,7 @@ class LLMService:
             result = await self._handle_audio(
                 content, file_number=file_number,
                 session_context=session_context,
+                filename=audio_filename,
             )
         else:
             result = await self._handle_text(
@@ -1350,9 +1352,10 @@ class LLMService:
         self, audio_data: bytes, *,
         file_number: str = None,
         session_context: dict | None = None,
+        filename: str = 'audio.webm',
     ) -> dict:
         """Transcribe audio, then route through the text pipeline with full context."""
-        transcript = await self.openai.transcribe_audio(audio_data)
+        transcript = await self.openai.transcribe_audio(audio_data, filename=filename)
 
         logger.info("Audio transcribed: length=%d", len(transcript))
 

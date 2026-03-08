@@ -30,20 +30,21 @@ class VoiceService:
         self.rag = RAGService()
         self.tts_config = settings.TTS_CONFIG
 
-    async def transcribe(self, *, audio_data: bytes, language: str = 'ar') -> str:
+    async def transcribe(self, *, audio_data: bytes, language: str = 'ar', filename: str = 'audio.webm') -> str:
         """
-        Transcribe audio to text using OpenAI Whisper.
+        Transcribe audio to text using OpenAI Whisper / gpt-4o-transcribe.
 
         Args:
-            audio_data: Raw audio bytes (OGG/WAV/MP3).
+            audio_data: Raw audio bytes.
             language: Language code for transcription (default: Arabic).
+            filename: Original filename with correct extension for format detection.
 
         Returns:
             Transcribed text string.
         """
-        logger.info("VoiceService.transcribe: %d bytes, lang=%s", len(audio_data), language)
+        logger.info("VoiceService.transcribe: %d bytes, lang=%s, file=%s", len(audio_data), language, filename)
 
-        transcript = await self.openai.transcribe_audio(audio_data)
+        transcript = await self.openai.transcribe_audio(audio_data, filename=filename)
 
         logger.info("VoiceService.transcribe result: %s", transcript[:80] if transcript else "")
         return transcript
