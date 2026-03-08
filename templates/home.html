@@ -124,9 +124,22 @@ animation:pulse-rec 1s steps(1) infinite}
 /* ── MOBILE ── */
 @media(max-width:900px){
   body{overflow-y:auto}
-  #room{height:auto;min-height:100vh;grid-template-columns:1fr;grid-template-rows:auto}
-  .mon.m1{grid-row:auto;min-height:220px}
+  #room{height:auto;min-height:100vh;grid-template-columns:1fr;grid-template-rows:auto;padding:8px}
+  .mon.m1{grid-row:auto;min-height:200px}
   .mon.m6{grid-column:auto}
+  .mb{font-size:.75rem;line-height:1.9}
+  .m1-sub{font-size:.65rem}
+  .m1-greek{font-size:.7rem}
+  .m1-greek2{font-size:.6rem}
+  .m1-attr{font-size:.55rem}
+  .sg-l{font-size:.65rem}.sg-v{font-size:.7rem}
+  #cta a{font-size:.75rem;padding:.5rem 1rem;min-height:44px;display:inline-flex;align-items:center}
+  .ftr-clock{font-size:.75rem}
+  .mh-rec{font-size:.6rem}
+}
+@media(max-width:480px){
+  .m1-name{font-size:clamp(3rem,14vw,5rem)}
+  .mon{border-radius:6px;padding:10px}
 }
 </style>
 </head>

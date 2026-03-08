@@ -288,6 +288,14 @@
         border-radius: 3px; font-weight: 600; text-transform: uppercase;
         letter-spacing: 0.3px; margin-right: auto;
     }
+    .new-chat-link {
+        font-size: 0.6875rem; color: var(--text-secondary); text-decoration: none;
+        padding: 4px 10px; border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md); transition: all 0.15s; font-family: var(--mono);
+    }
+    .new-chat-link:hover, .new-chat-link:active {
+        border-color: var(--border-default); color: var(--text-primary);
+    }
 
     /* Stats */
     .s-stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap-md); text-align: center; }
@@ -471,12 +479,13 @@
         .chat-messages {
             padding: var(--gap-md);
             gap: var(--gap-md);
+            -webkit-overflow-scrolling: touch;
         }
         .msg { max-width: 95%; }
         .msg-bubble {
             padding: var(--gap-md) var(--gap-lg);
             font-size: 0.9375rem;
-            line-height: 1.7;
+            line-height: 1.8;
         }
         .msg-avatar {
             width: 28px; height: 28px;
@@ -489,21 +498,21 @@
         /* Capability chips: single column for full readable text */
         .capabilities {
             grid-template-columns: 1fr;
-            gap: 6px;
+            gap: 8px;
         }
         .cap-chip {
-            padding: 12px 16px;
+            padding: 14px 16px;
             font-size: 0.9375rem;
-            min-height: 44px;
+            min-height: 48px;
         }
         .cap-icon {
-            width: 18px; height: 18px;
+            width: 20px; height: 20px;
         }
 
         /* Chat input: mobile keyboard-friendly */
         .chat-input-wrap {
             padding: var(--gap-sm) var(--gap-md);
-            padding-bottom: env(safe-area-inset-bottom, var(--gap-sm));
+            padding-bottom: max(var(--gap-sm), env(safe-area-inset-bottom));
         }
         .chat-input-bar {
             border-radius: var(--radius-lg);
@@ -522,6 +531,7 @@
         /* Chat header: clean single row */
         .chat-header {
             padding: 8px var(--gap-md);
+            padding-top: max(8px, env(safe-area-inset-top));
             gap: var(--gap-sm);
         }
         .chat-header-title {
@@ -550,15 +560,16 @@
             font-size: 0.75rem;
         }
 
-        /* Sidebar: slide-in overlay on mobile */
+        /* Sidebar: full-screen overlay with smooth transition */
         .app-sidebar {
             display: none;
             position: fixed;
-            top: 48px;
-            left: 0; right: 0; bottom: 0;
+            top: 0; left: 0; right: 0; bottom: 0;
             background: var(--bg-base);
             z-index: 900;
             padding: var(--gap-md);
+            padding-top: max(var(--gap-lg), env(safe-area-inset-top));
+            padding-bottom: max(var(--gap-lg), env(safe-area-inset-bottom));
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
         }
@@ -570,35 +581,78 @@
         .mobile-sidebar-toggle { display: flex; }
 
         /* Upload bar */
-        .upload-bar { font-size: 0.6875rem; padding: 8px var(--gap-md); }
+        .upload-bar {
+            font-size: 0.75rem;
+            padding: 10px var(--gap-md);
+            z-index: 10;
+        }
 
         /* Quick action buttons */
         .qa {
-            padding: 12px;
-            min-height: 44px;
-            font-size: 0.8125rem;
+            padding: 14px;
+            min-height: 48px;
+            font-size: 0.875rem;
         }
+
+        /* Sidebar labels — bump sizes for readability */
+        .s-card-head { font-size: 0.75rem; }
+        .sm-val { font-size: 1.125rem; }
+        .sm-lbl { font-size: 0.625rem; }
+        .sm-bar-row { font-size: 0.6875rem; }
+        .sm-bar-row .sm-bar-label { width: 55px; }
+        .sm-bar-row .sm-bar-val { width: 50px; }
+        .sm-reading { font-size: 0.75rem; }
+        .sm-cost-day-val { font-size: 1rem; }
+        .sm-cost-day-lbl { font-size: 0.625rem; }
+        .sm-cost-day-trend { font-size: 0.6875rem; }
+        .t-tick { font-size: 0.625rem; }
+        .esf-row { font-size: 0.625rem; }
+        .energy-score-label { font-size: 0.8125rem; }
+        .energy-score-num { font-size: 1.5rem; }
+        .energy-score-ring { width: 76px; height: 76px; }
+        .energy-score-ring svg { width: 76px; height: 76px; }
 
         /* Prevent horizontal overflow */
         .chat-messages,
         .s-card-body,
         .msg-bubble {
             overflow-x: hidden;
+            overflow-wrap: break-word;
             word-break: break-word;
         }
 
-        /* Touch feedback */
+        /* Touch feedback on all interactive elements */
         .input-btn:active,
         .cap-chip:active,
-        .qa:active {
+        .qa:active,
+        .mobile-sidebar-toggle:active,
+        .tts-toggle:active,
+        .tts-play-btn:active {
             transform: scale(0.95);
             opacity: 0.8;
+            transition: transform 0.1s, opacity 0.1s;
         }
 
         /* Prevent pull-to-refresh on chat scroll */
         .chat-messages {
             overscroll-behavior: contain;
         }
+
+        /* Smooth scrolling */
+        * { -webkit-tap-highlight-color: transparent; }
+    }
+
+    /* Extra small phones (≤480px) */
+    @media (max-width: 480px) {
+        .msg-bubble {
+            padding: 10px 14px;
+            font-size: 0.875rem;
+        }
+        .chat-messages { padding: 8px; }
+        .cap-chip { font-size: 0.875rem; padding: 12px 14px; }
+        .energy-score-ring { width: 64px; height: 64px; }
+        .energy-score-ring svg { width: 64px; height: 64px; }
+        .energy-score-num { font-size: 1.25rem; }
     }
 </style>
 {% endblock %}
@@ -629,7 +683,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
                     صوت
                 </div>
-                <a href="{% url 'dashboard:consumer-index' %}" style="font-size: 0.6875rem; color: var(--text-secondary); text-decoration: none; padding: 4px 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); transition: all 0.15s; font-family: var(--mono);" onmouseover="this.style.borderColor='var(--border-default)';this.style.color='var(--text-primary)'" onmouseout="this.style.borderColor='var(--border-subtle)';this.style.color='var(--text-secondary)'">+ محادثة جديدة</a>
+                <a href="{% url 'dashboard:consumer-index' %}" class="new-chat-link">+ محادثة جديدة</a>
                 <span class="panel-badge" style="background: var(--operational-bg); color: var(--operational); border: 1px solid var(--operational-border);">READY</span>
                 <button class="mobile-sidebar-toggle" id="mobile-sidebar-toggle" title="القائمة الجانبية">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -693,6 +747,7 @@
 
     <!-- ═══ Sidebar ═══ -->
     <div class="app-sidebar">
+        <button class="sidebar-close-btn" id="sidebar-close-btn" style="display:none;position:absolute;top:12px;left:12px;background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:50%;width:36px;height:36px;color:var(--text-secondary);font-size:1.25rem;cursor:pointer;z-index:10;line-height:1">&times;</button>
         <div class="s-card">
             <div class="s-card-body" style="display: flex; align-items: center; gap: 8px; padding: 10px var(--gap-lg);">
                 <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--operational); box-shadow: 0 0 6px var(--operational);"></span>
@@ -1386,12 +1441,22 @@
 
     /* ── Mobile sidebar toggle ── */
     var sidebarToggle = document.getElementById('mobile-sidebar-toggle');
+    var sidebarCloseBtn = document.getElementById('sidebar-close-btn');
     var sidebar = document.querySelector('.app-sidebar');
-    if (sidebarToggle && sidebar) {
-        sidebarToggle.addEventListener('click', function() {
-            sidebar.classList.toggle('mobile-open');
-        });
+
+    function toggleSidebar() {
+        if (!sidebar) return;
+        var isOpen = sidebar.classList.toggle('mobile-open');
+        if (sidebarCloseBtn) sidebarCloseBtn.style.display = isOpen ? 'block' : 'none';
     }
+    function closeSidebar() {
+        if (!sidebar) return;
+        sidebar.classList.remove('mobile-open');
+        if (sidebarCloseBtn) sidebarCloseBtn.style.display = 'none';
+    }
+
+    if (sidebarToggle) sidebarToggle.addEventListener('click', toggleSidebar);
+    if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', closeSidebar);
 })();
 </script>
 {% endblock %}

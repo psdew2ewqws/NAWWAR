@@ -98,6 +98,7 @@
             display: flex;
             align-items: center;
             padding: 0 var(--gap-2xl);
+            padding-top: env(safe-area-inset-top, 0);
             position: sticky;
             top: 0;
             z-index: 1000;
@@ -281,19 +282,19 @@
             }
             .topbar-nav::-webkit-scrollbar { display: none; }
             .topbar-link {
-                padding: 0 var(--gap-sm);
-                font-size: 0.75rem;
+                padding: 0 var(--gap-md);
+                font-size: 0.8125rem;
                 white-space: nowrap;
                 min-height: 44px;
             }
-            .topbar-link svg { width: 14px; height: 14px; }
+            .topbar-link svg { width: 16px; height: 16px; }
 
             /* Right section: compact */
             .topbar-right {
                 gap: var(--gap-sm);
                 flex-shrink: 0;
             }
-            .status-indicator { font-size: 0.5625rem; }
+            .status-indicator { font-size: 0.625rem; }
             .topbar-clock { display: none; }
 
             /* Bump small labels for mobile readability */
@@ -302,8 +303,16 @@
             .status-indicator,
             .kpi-badge,
             .kpi-sub {
-                font-size: 0.625rem;
+                font-size: 0.6875rem;
             }
+            .s-card-head { font-size: 0.75rem; }
+            .s-val { font-size: 1.25rem; }
+
+            /* Touch feedback */
+            .topbar-link:active { opacity: 0.7; }
+
+            /* Tap highlight removal */
+            * { -webkit-tap-highlight-color: transparent; }
         }
 
         /* ─── Panel ─── */
