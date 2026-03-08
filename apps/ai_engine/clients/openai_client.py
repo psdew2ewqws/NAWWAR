@@ -169,11 +169,16 @@ class OpenAIClient:
             audio_file = io.BytesIO(audio_data)
             audio_file.name = 'audio.ogg'
 
-            response = await self.client.audio.transcriptions.create(
-                model=self.config['WHISPER_MODEL'],
-                file=audio_file,
-                language='ar',
-            )
+            model = self.config['WHISPER_MODEL']
+            kwargs = {
+                'model': model,
+                'file': audio_file,
+            }
+            # Only whisper-1 supports the language hint; gpt-4o-transcribe auto-detects
+            if model.startswith('whisper'):
+                kwargs['language'] = 'ar'
+
+            response = await self.client.audio.transcriptions.create(**kwargs)
 
             latency = int((time.monotonic() - start) * 1000)
 
