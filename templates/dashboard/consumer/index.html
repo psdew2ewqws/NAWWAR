@@ -393,6 +393,56 @@
         background: var(--operational-bg); color: var(--operational); border: 1px solid var(--operational-border);
     }
 
+    /* Energy Score */
+    .energy-score-wrap {
+        display: flex; align-items: center; gap: 14px; padding: 2px 0;
+    }
+    .energy-score-ring {
+        position: relative; width: 68px; height: 68px; flex-shrink: 0;
+    }
+    .energy-score-ring svg { transform: rotate(-90deg); }
+    .energy-score-ring .ring-bg { fill: none; stroke: var(--bg-overlay); stroke-width: 5; }
+    .energy-score-ring .ring-fg { fill: none; stroke-width: 5; stroke-linecap: round; transition: stroke-dashoffset 1s ease, stroke 0.5s ease; }
+    .energy-score-num {
+        position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+        font-family: var(--mono); font-size: 1.25rem; font-weight: 800; color: var(--text-heading);
+    }
+    .energy-score-details { flex: 1; min-width: 0; }
+    .energy-score-label {
+        font-size: 0.6875rem; font-weight: 600; color: var(--text-heading); margin-bottom: 4px;
+    }
+    .energy-score-factors {
+        display: flex; flex-direction: column; gap: 2px;
+    }
+    .esf-row {
+        display: flex; align-items: center; gap: 5px;
+        font-family: var(--mono); font-size: 0.5rem; color: var(--text-muted);
+    }
+    .esf-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+    .esf-bar { flex: 1; height: 3px; background: var(--bg-overlay); border-radius: 2px; overflow: hidden; }
+    .esf-fill { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
+
+    /* Cost per day */
+    .sm-cost-day {
+        margin-top: 6px; padding: 6px 10px;
+        background: var(--bg-base); border-radius: var(--radius-md);
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .sm-cost-day-val {
+        font-family: var(--mono); font-size: 0.875rem; font-weight: 700; color: var(--text-heading);
+    }
+    .sm-cost-day-lbl {
+        font-family: var(--mono); font-size: 0.5rem; color: var(--text-muted);
+        text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .sm-cost-day-trend {
+        font-family: var(--mono); font-size: 0.5625rem; font-weight: 600;
+        padding: 1px 5px; border-radius: 3px;
+    }
+    .sm-cost-day-trend.up { color: var(--danger); background: rgba(218,54,51,0.1); }
+    .sm-cost-day-trend.down { color: var(--success); background: rgba(46,160,67,0.1); }
+    .sm-cost-day-trend.same { color: var(--text-muted); background: var(--bg-overlay); }
+
     /* ═══════════════════════════════════════════
        Mobile overrides — MUST be last so they
        win the cascade over base rules above
@@ -648,6 +698,10 @@
                 <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--operational); box-shadow: 0 0 6px var(--operational);"></span>
                 <span style="font-size: 0.75rem; color: var(--text-primary); font-weight: 500;">نوّر جاهز</span>
             </div>
+        </div>
+        <div class="s-card" id="energy-score-card" style="display:none">
+            <div class="s-card-head"><span class="s-dot" style="background: var(--info);"></span> مؤشر الطاقة <span id="es-ai-tag" style="margin-right:auto;font-family:var(--mono);font-size:0.45rem;padding:1px 4px;border-radius:3px;background:var(--info-bg);color:var(--info);font-weight:600">AI</span></div>
+            <div class="s-card-body" id="energy-score-body"></div>
         </div>
         <div class="s-card" id="tariff-card">
             <div class="s-card-head"><span class="s-dot" style="background: #d4a843;"></span> التعرفة السكنية</div>
@@ -1144,6 +1198,27 @@
             html += '<div style="display:flex;justify-content:space-between;margin-top:3px;font-family:var(--mono);font-size:0.5rem;color:var(--text-muted)"><span>' + firstDate + '</span><span>DAILY kWh</span><span>' + lastDate + '</span></div>';
         }
 
+        /* ── Cost Per Day ── */
+        var daysNum = parseFloat(days) || 1;
+        var curBillNum = parseFloat(currentBill) || 0;
+        var costPerDay = daysNum > 0 ? (curBillNum / daysNum) : 0;
+        var prevMonthKwh = parseFloat((comp.lastMonthconsumption || '0')) || 0;
+        // Estimate previous cost/day: prev month kWh ÷ 30 days × avg cost rate
+        var avgRate = curBillNum / (parseFloat(currentKwh) || 1);
+        var prevCostPerDay = prevMonthKwh > 0 ? (prevMonthKwh / 30 * avgRate) : 0;
+        var costTrend = 0;
+        if (prevCostPerDay > 0) costTrend = ((costPerDay - prevCostPerDay) / prevCostPerDay * 100);
+
+        html += '<div class="sm-cost-day">';
+        html += '<div><div class="sm-cost-day-val">' + costPerDay.toFixed(3) + '</div><div class="sm-cost-day-lbl">JOD / DAY</div></div>';
+        if (prevCostPerDay > 0) {
+            var trendCls = costTrend > 2 ? 'up' : (costTrend < -2 ? 'down' : 'same');
+            var trendSign = costTrend > 0 ? '+' : '';
+            var trendArrow = costTrend > 2 ? '▲' : (costTrend < -2 ? '▼' : '—');
+            html += '<div class="sm-cost-day-trend ' + trendCls + '">' + trendArrow + ' ' + trendSign + costTrend.toFixed(0) + '% vs PREV</div>';
+        }
+        html += '</div>';
+
         /* ── Meter readings ── */
         html += '<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border-subtle)">';
         html += '<div class="sm-reading"><span class="sm-reading-label">LAST BILL</span><span class="sm-reading-val">' + lastReading + '</span></div>';
@@ -1151,6 +1226,124 @@
         html += '</div>';
 
         body.innerHTML = html;
+
+        /* ── Energy Score ── */
+        renderEnergyScore(sm, comp);
+    }
+
+    /* ── Energy Score — AI-powered efficiency rating ── */
+    function renderEnergyScore(sm, comp) {
+        var card = document.getElementById('energy-score-card');
+        var body = document.getElementById('energy-score-body');
+        if (!card || !body) return;
+
+        var expKwh = parseFloat(sm.expectedElectricityConsumptionQuntity) || 0;
+        var prevKwh = parseFloat((comp.lastMonthconsumption || '0')) || 0;
+        var yrKwh = parseFloat((comp.lastYearconsumption || '0')) || 0;
+        var days = parseFloat(sm.numberOfConsumptionDaysSinceLastRead) || 1;
+        var curKwh = parseFloat(sm.currentElectricityConsumptionQuntity) || 0;
+
+        if (expKwh <= 0) return;
+
+        // Factor 1: Tariff tier efficiency (lower tier = better) — 0-30 pts
+        var tierScore = 30;
+        if (expKwh <= 300) tierScore = 30;
+        else if (expKwh <= 500) tierScore = 22;
+        else if (expKwh <= 700) tierScore = 14;
+        else if (expKwh <= 1000) tierScore = 8;
+        else tierScore = 3;
+
+        // Factor 2: Month-over-month trend (decreasing = better) — 0-30 pts
+        var trendScore = 15;
+        if (prevKwh > 0) {
+            var moPct = (expKwh - prevKwh) / prevKwh * 100;
+            if (moPct <= -15) trendScore = 30;
+            else if (moPct <= -5) trendScore = 25;
+            else if (moPct <= 0) trendScore = 20;
+            else if (moPct <= 10) trendScore = 12;
+            else if (moPct <= 25) trendScore = 6;
+            else trendScore = 2;
+        }
+
+        // Factor 3: Year-over-year improvement — 0-20 pts
+        var yearScore = 10;
+        if (yrKwh > 0) {
+            var yrPct = (expKwh - yrKwh) / yrKwh * 100;
+            if (yrPct <= -15) yearScore = 20;
+            else if (yrPct <= -5) yearScore = 16;
+            else if (yrPct <= 5) yearScore = 12;
+            else if (yrPct <= 20) yearScore = 6;
+            else yearScore = 2;
+        }
+
+        // Factor 4: Consumption consistency (low daily variance = better) — 0-20 pts
+        var daily = sm.consumptionMonthlyList || [];
+        var consistScore = 12;
+        if (daily.length >= 3) {
+            var vals = [];
+            for (var i = 0; i < daily.length; i++) {
+                var v = parseFloat(daily[i].consumptionAtDate || daily[i].consumptionQuntity) || 0;
+                if (v > 0) vals.push(v);
+            }
+            if (vals.length >= 3) {
+                var mean = vals.reduce(function(a,b){return a+b;},0) / vals.length;
+                var variance = vals.reduce(function(a,b){return a+(b-mean)*(b-mean);},0) / vals.length;
+                var cv = Math.sqrt(variance) / mean; // coefficient of variation
+                if (cv <= 0.15) consistScore = 20;
+                else if (cv <= 0.3) consistScore = 16;
+                else if (cv <= 0.5) consistScore = 10;
+                else consistScore = 4;
+            }
+        }
+
+        var total = Math.min(100, Math.max(0, tierScore + trendScore + yearScore + consistScore));
+
+        // Color based on score
+        var scoreColor = '#da3633'; // red
+        var scoreLabel = 'يحتاج تحسين';
+        if (total >= 80) { scoreColor = '#2ea043'; scoreLabel = 'ممتاز'; }
+        else if (total >= 60) { scoreColor = '#3fb950'; scoreLabel = 'جيد'; }
+        else if (total >= 40) { scoreColor = '#d29922'; scoreLabel = 'متوسط'; }
+        else if (total >= 25) { scoreColor = '#db6d28'; scoreLabel = 'ضعيف'; }
+
+        // SVG ring (circumference = 2πr = 2×π×28 ≈ 175.93)
+        var circ = 175.93;
+        var offset = circ - (total / 100 * circ);
+
+        var h = '<div class="energy-score-wrap">';
+        h += '<div class="energy-score-ring">';
+        h += '<svg width="68" height="68" viewBox="0 0 68 68">';
+        h += '<circle class="ring-bg" cx="34" cy="34" r="28"/>';
+        h += '<circle class="ring-fg" cx="34" cy="34" r="28" stroke="' + scoreColor + '" stroke-dasharray="' + circ + '" stroke-dashoffset="' + offset + '"/>';
+        h += '</svg>';
+        h += '<div class="energy-score-num" style="color:' + scoreColor + '">' + total + '</div>';
+        h += '</div>';
+        h += '<div class="energy-score-details">';
+        h += '<div class="energy-score-label">' + scoreLabel + '</div>';
+        h += '<div class="energy-score-factors">';
+
+        // Factor bars
+        var factors = [
+            {name: 'الشريحة', score: tierScore, max: 30, color: tierScore >= 20 ? '#2ea043' : (tierScore >= 12 ? '#d29922' : '#da3633')},
+            {name: 'الاتجاه', score: trendScore, max: 30, color: trendScore >= 20 ? '#2ea043' : (trendScore >= 10 ? '#d29922' : '#da3633')},
+            {name: 'سنوي', score: yearScore, max: 20, color: yearScore >= 14 ? '#2ea043' : (yearScore >= 8 ? '#d29922' : '#da3633')},
+            {name: 'الثبات', score: consistScore, max: 20, color: consistScore >= 14 ? '#2ea043' : (consistScore >= 8 ? '#d29922' : '#da3633')}
+        ];
+        for (var f = 0; f < factors.length; f++) {
+            var fac = factors[f];
+            var pct = (fac.score / fac.max * 100).toFixed(0);
+            h += '<div class="esf-row">';
+            h += '<span class="esf-dot" style="background:' + fac.color + '"></span>';
+            h += '<span style="width:32px">' + fac.name + '</span>';
+            h += '<div class="esf-bar"><div class="esf-fill" style="width:' + pct + '%;background:' + fac.color + '"></div></div>';
+            h += '<span style="width:18px;text-align:left;color:var(--text-secondary)">' + fac.score + '</span>';
+            h += '</div>';
+        }
+
+        h += '</div></div></div>';
+
+        body.innerHTML = h;
+        card.style.display = '';
     }
 
     /* ── Load smart meter — calls provider, falls back to server ── */
