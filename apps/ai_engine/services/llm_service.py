@@ -42,7 +42,7 @@ MODEL_COST_PER_1K = {
     FAST_CLAUDE: 0.00025,
     FAST_GPT: 0.00015,
     'gpt-4o': 0.005,
-    'claude-sonnet-4-20250514': 0.003,
+    'claude-sonnet-4-6': 0.003,
 }
 
 BUDGET_EXCEEDED_AR = "الخدمة مشغولة حالياً، يرجى المحاولة لاحقاً."
@@ -50,16 +50,44 @@ DAILY_COST_CACHE_KEY = 'ai_daily_cost_usd'
 
 # Typical appliance monthly kWh for Jordanian households
 APPLIANCE_KWH = {
-    'مكيف': {'name_ar': 'مكيف', 'name_en': 'AC', 'kwh_per_month': 180, 'note': '12hrs/day summer'},
+    # Cooling & Heating (highest consumers)
+    'مكيف': {'name_ar': 'مكيف', 'name_en': 'AC', 'kwh_per_month': 180, 'note': '1.5 طن، 8 ساعات/يوم'},
+    'تكييف': {'name_ar': 'مكيف', 'name_en': 'AC', 'kwh_per_month': 180, 'note': '1.5 طن، 8 ساعات/يوم'},
+    'دفاية': {'name_ar': 'دفاية كهربائية', 'name_en': 'Space Heater', 'kwh_per_month': 200, 'note': '2000 واط'},
+    'هيتر': {'name_ar': 'دفاية كهربائية', 'name_en': 'Space Heater', 'kwh_per_month': 200, 'note': '2000 واط'},
+    'صوبة': {'name_ar': 'دفاية كهربائية', 'name_en': 'Space Heater', 'kwh_per_month': 200, 'note': '2000 واط'},
+    # Water heating
+    'سخان': {'name_ar': 'سخان ماء', 'name_en': 'Water Heater', 'kwh_per_month': 120, 'note': '80 لتر، ساعتين/يوم'},
+    'بويلر': {'name_ar': 'سخان ماء', 'name_en': 'Water Heater', 'kwh_per_month': 120, 'note': '80 لتر'},
+    # Kitchen
     'ثلاجة': {'name_ar': 'ثلاجة', 'name_en': 'Refrigerator', 'kwh_per_month': 45, 'note': '24/7'},
-    'غسالة': {'name_ar': 'غسالة', 'name_en': 'Washing Machine', 'kwh_per_month': 20, 'note': '5 loads/week'},
-    'سخان': {'name_ar': 'سخان ماء', 'name_en': 'Water Heater', 'kwh_per_month': 120, 'note': '2hrs/day'},
-    'تلفزيون': {'name_ar': 'تلفزيون', 'name_en': 'TV', 'kwh_per_month': 15, 'note': '6hrs/day'},
-    'إضاءة': {'name_ar': 'إضاءة', 'name_en': 'Lighting', 'kwh_per_month': 30, 'note': '10 LEDs 6hrs/day'},
-    'كمبيوتر': {'name_ar': 'كمبيوتر/لابتوب', 'name_en': 'PC/Laptop', 'kwh_per_month': 25, 'note': '8hrs/day'},
-    'مجفف': {'name_ar': 'مجفف ملابس', 'name_en': 'Dryer', 'kwh_per_month': 60, 'note': '5 loads/week'},
-    'فرن': {'name_ar': 'فرن كهربائي', 'name_en': 'Electric Oven', 'kwh_per_month': 40, 'note': '1hr/day'},
-    'مكواة': {'name_ar': 'مكواة', 'name_en': 'Iron', 'kwh_per_month': 15, 'note': '3hrs/week'},
+    'براد': {'name_ar': 'ثلاجة', 'name_en': 'Refrigerator', 'kwh_per_month': 45, 'note': '24/7'},
+    'فريزر': {'name_ar': 'فريزر', 'name_en': 'Freezer', 'kwh_per_month': 40, 'note': '24/7'},
+    'فرن': {'name_ar': 'فرن كهربائي', 'name_en': 'Electric Oven', 'kwh_per_month': 60, 'note': 'ساعة/يوم'},
+    'ميكروويف': {'name_ar': 'ميكروويف', 'name_en': 'Microwave', 'kwh_per_month': 10, 'note': '20 دقيقة/يوم'},
+    'غلاية': {'name_ar': 'غلاية ماء', 'name_en': 'Electric Kettle', 'kwh_per_month': 12, 'note': '3 مرات/يوم'},
+    'كتل': {'name_ar': 'غلاية ماء', 'name_en': 'Electric Kettle', 'kwh_per_month': 12, 'note': '3 مرات/يوم'},
+    'جلاية': {'name_ar': 'جلاية صحون', 'name_en': 'Dishwasher', 'kwh_per_month': 30, 'note': 'دورة/يوم'},
+    # Laundry
+    'غسالة': {'name_ar': 'غسالة ملابس', 'name_en': 'Washing Machine', 'kwh_per_month': 20, 'note': '5 دورات/أسبوع'},
+    'مجفف': {'name_ar': 'مجفف ملابس', 'name_en': 'Dryer', 'kwh_per_month': 75, 'note': 'استهلاك عالي'},
+    'نشافة': {'name_ar': 'نشافة ملابس', 'name_en': 'Dryer', 'kwh_per_month': 75, 'note': 'استهلاك عالي'},
+    'مكواة': {'name_ar': 'مكواة', 'name_en': 'Iron', 'kwh_per_month': 15, 'note': '3 ساعات/أسبوع'},
+    # Entertainment & Electronics
+    'تلفزيون': {'name_ar': 'تلفزيون', 'name_en': 'TV', 'kwh_per_month': 15, 'note': '6 ساعات/يوم'},
+    'تلفاز': {'name_ar': 'تلفزيون', 'name_en': 'TV', 'kwh_per_month': 15, 'note': '6 ساعات/يوم'},
+    'شاشة': {'name_ar': 'تلفزيون', 'name_en': 'TV', 'kwh_per_month': 15, 'note': '6 ساعات/يوم'},
+    'كمبيوتر': {'name_ar': 'كمبيوتر', 'name_en': 'Desktop PC', 'kwh_per_month': 25, 'note': '8 ساعات/يوم'},
+    'لابتوب': {'name_ar': 'لابتوب', 'name_en': 'Laptop', 'kwh_per_month': 8, 'note': '8 ساعات/يوم'},
+    'بلايستيشن': {'name_ar': 'بلايستيشن', 'name_en': 'PlayStation', 'kwh_per_month': 15, 'note': '4 ساعات/يوم'},
+    # Lighting
+    'إضاءة': {'name_ar': 'إضاءة LED', 'name_en': 'LED Lighting', 'kwh_per_month': 10, 'note': '10 لمبات'},
+    'لمبات': {'name_ar': 'إضاءة LED', 'name_en': 'LED Lighting', 'kwh_per_month': 10, 'note': '10 لمبات'},
+    # Other
+    'مضخة': {'name_ar': 'مضخة ماء', 'name_en': 'Water Pump', 'kwh_per_month': 30, 'note': 'حسب الاستخدام'},
+    'مروحة': {'name_ar': 'مروحة', 'name_en': 'Fan', 'kwh_per_month': 8, 'note': '8 ساعات/يوم'},
+    'مكنسة': {'name_ar': 'مكنسة كهربائية', 'name_en': 'Vacuum', 'kwh_per_month': 8, 'note': 'ساعة/يوم'},
+    'راوتر': {'name_ar': 'راوتر إنترنت', 'name_en': 'Router', 'kwh_per_month': 5, 'note': '24/7'},
 }
 
 
@@ -258,18 +286,40 @@ class LLMService:
     async def _ask_for_file_number(self, user_text: str) -> str:
         """
         Conversational response when user asks about billing but hasn't
-        provided a file number. Uses fast GPT to understand context and
-        respond naturally — handles image upload requests, panicking users, etc.
+        provided a file number. Guides them to find it or take a photo.
         """
+        # Check if user is saying they don't know their number
+        dont_know_phrases = [
+            'ما بعرف', 'مش عارف', 'ما اعرف', 'لا اعرف', 'مو عارف',
+            'وين', 'كيف', 'ما عندي', 'مش لاقي', 'مش ملاقي',
+            'ما لقيت', 'شو هو', 'اي رقم', 'ايش رقم', 'وين الرقم',
+            "don't know", "where", "how", "can't find", "what number",
+            'ما بلاقي', 'مش فاهم', 'مش محدد',
+        ]
+        user_lower = user_text.lower().strip()
+        is_confused = any(phrase in user_lower for phrase in dont_know_phrases)
+
+        if is_confused:
+            return (
+                "لا تشيل هم! رقم الملف موجود على فاتورة الكهرباء الورقية.\n\n"
+                "مكانه بالتحديد:\n"
+                "في نص الفاتورة، بعد جدول قراءات العداد، مكتوب:\n"
+                "\"رقم المرجع : 01/XXXXX/XXXXXX\"\n\n"
+                "هو رقم من 13 خانة يبدأ بـ 015.\n\n"
+                "الأسهل: صوّر الفاتورة بالكاميرا وابعثها هون وأنا بطلّع الرقم لحالي.\n"
+                "اضغط زر الكاميرا أو ابعثلي الصورة مباشرة."
+            )
+
         try:
             reply = await self.openai.chat(
                 messages=[{'role': 'user', 'content': user_text}],
                 system_prompt=(
-                    "أنت نوّار، مساعد كهرباء ذكي. المستخدم يسأل عن فاتورته لكنه لم يعطِ رقم الملف.\n"
+                    "أنت نوّار، مساعد كهرباء ذكي أردني. المستخدم يسأل عن فاتورته لكنه لم يعطِ رقم الملف.\n"
                     "القواعد:\n"
                     "- أجب بتعاطف ثم اطلب رقم الملف (13 خانة يبدأ بـ 015)\n"
-                    "- إذا ذكر صورة/مسح: أخبره عن زر 'مسح فاتورة' (SCAN)\n"
-                    "- أخبره: الرقم في أعلى يمين الفاتورة\n"
+                    "- أخبره أنه يقدر يصوّر الفاتورة الورقية ويبعثها صورة وأنا بطلّع الرقم\n"
+                    "- الرقم مكتوب في نص الفاتورة بجانب كلمة 'رقم المرجع'\n"
+                    "- التنسيق: 01/XXXXX/XXXXXX (مثال: 01/50706/667387)\n"
                     "- 3 جمل فقط. بدون Markdown أو إيموجي. عربي فقط."
                 ),
                 max_tokens=200,
@@ -278,12 +328,10 @@ class LLMService:
             return reply
         except Exception as e:
             logger.warning("_ask_for_file_number AI failed: %s", e)
-            # Fallback to static response
             return (
-                "لتحليل فاتورتك، أحتاج رقم الملف — وهو رقم مكوّن من 13 خانة يبدأ بـ 015، "
-                "مثال: 015XXXXXXXXXX\n\n"
-                "📌 تجده في أعلى يمين فاتورة الكهرباء بجانب كلمة 'رقم الملف'.\n\n"
-                "يمكنك كتابة الرقم هنا مباشرة، أو استخدام زر 'مسح فاتورة' (SCAN) لتصوير الفاتورة."
+                "لتحليل فاتورتك، أحتاج رقم الملف — 13 خانة يبدأ بـ 015.\n"
+                "تلاقيه في نص الفاتورة الورقية بجانب كلمة 'رقم المرجع'.\n\n"
+                "أو صوّر الفاتورة الورقية وابعثها هون وأنا بطلّع الرقم تلقائياً."
             )
 
     async def _handle_invalid_file_number(self, file_number: str) -> str:
@@ -396,19 +444,24 @@ class LLMService:
         jepco_data: dict = None,
     ) -> dict | None:
         """
-        Multi-model JEPCO analysis pipeline:
+        Full JEPCO analysis pipeline with JWT auto-auth:
 
-        1. Use client-provided JEPCO data if available (browser fetched it
-           directly — bypasses geo-blocking), OR fetch server-side as fallback
-        2. Build structured data template (instant)
-        3. GPT-4o: Deep reasoning — appliance pattern analysis, peak day
-           investigation, daily usage profiling (reasoning engine)
-        4. Claude Sonnet: Bill & tariff analysis, numerical precision
-        5. Combine into comprehensive response with appliance questions
+        1. Use client-provided data if available, OR fetch ALL data server-side
+           (smart meter + SAP subscriber + bills + consumption comparison)
+        2. Build structured data template with anomaly detection
+        3. Claude: Bill & tariff analysis, numerical precision
+        4. Combine into personalized Arabic response with appliance questions
         """
-        from apps.consumer.clients.jepco_client import fetch_smart_meter
+        from apps.consumer.clients.jepco_client import fetch_all_data, fetch_smart_meter
 
         try:
+            smart_data = None
+            bills_data = None
+            sap_data = None
+            comparison_data = None
+            subsidy_data = None
+            bill_header = None
+
             # Use client-provided data if available (browser → JEPCO direct)
             if jepco_data and jepco_data.get('smart_meter'):
                 logger.info("Using client-provided JEPCO data for %s", file_number)
@@ -416,20 +469,29 @@ class LLMService:
                 bills_data = jepco_data.get('bills')
                 sap_data = jepco_data.get('sap')
             else:
-                # Server-side fetch — SmartMeter only (no auth needed)
-                smart_data = await fetch_smart_meter(file_number)
-                bills_data = None
-                sap_data = None
+                # Server-side: fetch ALL data via JWT auto-auth (parallel)
+                all_data = await fetch_all_data(file_number)
+                smart_data = all_data.get('smart_meter')
+                sap_data = all_data.get('sap_info')
+                bills_data = all_data.get('bills')
+                comparison_data = all_data.get('consumption_comparison')
+                subsidy_data = all_data.get('subsidy_simulation')
+                bill_header = all_data.get('bill_header')
 
             if not smart_data or not smart_data.get('showSmartMeterFeature'):
+                # Even without smart meter, if we have SAP data, return basic info
+                if sap_data:
+                    return self._build_non_smart_response(sap_data, file_number, intent)
                 return None
 
-            # Build structured template (instant)
+            # Build structured template with all data (instant)
             template_text = self._build_jepco_analysis(
                 smart_data, file_number, bills_data, sap_data,
+                comparison=comparison_data, subsidy=subsidy_data,
+                bill_header=bill_header,
             )
 
-            # Claude bill analysis only (GPT-4o removed to reduce response length)
+            # Claude bill analysis (enhanced with real bill data)
             sonnet_result = None
             try:
                 sonnet_result = await self._sonnet_bill_analysis(
@@ -471,10 +533,13 @@ class LLMService:
                     'awaiting': 'appliance_list',
                     'subscriber': subscriber_info,
                     'models_used': {
-                        'data': 'jepco_smart_meter',
+                        'data': 'jepco_full_api',
                         'bill_analysis': 'claude-sonnet' if sonnet_result else None,
                     },
-                    'bills_found': len(bills_data) if isinstance(bills_data, list) else 0,
+                    'bills_found': (
+                        len(bills_data.get('allBillsDetails', []))
+                        if isinstance(bills_data, dict) else 0
+                    ),
                     'current_kwh': smart_data.get('currentElectricityConsumptionQuntity'),
                     'bill_estimate': smart_data.get('expectedElectricityCurrentBillAmount'),
                     'projected_bill': smart_data.get('expectedElectricityEndofMonthBillAmount'),
@@ -485,6 +550,44 @@ class LLMService:
         except Exception as e:
             logger.warning("JEPCO live analysis failed: %s", e)
             return None
+
+    def _build_non_smart_response(
+        self, sap: dict, file_number: str, intent: str,
+    ) -> dict:
+        """Build response for meters without smart meter but with SAP data."""
+        name = sap.get('firstName', '')
+        meter = sap.get('meterNumber', '')
+        sub_desc = sap.get('subscriptionDescription', '')
+        office = sap.get('officeDescription', '')
+        subsidy = 'نعم' if sap.get('subsidy_Flag') == 'X' else 'لا'
+
+        lines = [
+            f"بيانات المشترك — {name}",
+            f"رقم الملف: {file_number}",
+            f"رقم العداد: {meter}",
+            f"نوع الاشتراك: {sub_desc}",
+            f"المكتب: {office}",
+            f"الدعم الحكومي: {subsidy}",
+            "",
+            "عدادك ليس عداداً ذكياً، لذلك لا تتوفر بيانات الاستهلاك اللحظية.",
+            "لكن يمكنك إرسال صورة فاتورتك الورقية وسأحللها لك بالتفصيل.",
+        ]
+        return {
+            'response_text': '\n'.join(lines),
+            'response_type': 'jepco_analysis',
+            'metadata': {
+                'intent': intent,
+                'file_number': file_number,
+                'source': 'jepco_sap_only',
+                'subscriber': {
+                    'name': name,
+                    'file_number': file_number,
+                    'meter_number': meter,
+                    'subscription_type': sub_desc,
+                    'office': office,
+                },
+            },
+        }
 
     async def _gpt4o_deep_analysis(
         self, smart_data: dict, file_number: str,
@@ -625,8 +728,11 @@ class LLMService:
 
     @staticmethod
     def _build_jepco_analysis(
-        sm: dict, file_number: str, bills: list | None = None,
+        sm: dict, file_number: str, bills=None,
         sap: dict | None = None,
+        comparison: dict | None = None,
+        subsidy: list | None = None,
+        bill_header: dict | None = None,
     ) -> str:
         """Build instant structured analysis from smart meter + SAP + bill data."""
         days = sm.get('numberOfConsumptionDaysSinceLastRead', '?')
@@ -804,16 +910,44 @@ class LLMService:
                 except (ValueError, TypeError):
                     lines.append(f"  {date_str}: {kwh} kWh")
 
-        # Bill history section
-        if bills and isinstance(bills, list) and len(bills) > 0:
+        # Bill history section — from real JEPCO API
+        bill_details = []
+        if isinstance(bills, dict):
+            bill_details = bills.get('allBillsDetails', [])
+        elif isinstance(bills, list):
+            bill_details = bills
+
+        if bill_details:
             lines.append("")
             lines.append("سجل الفواتير السابقة:")
-            for b in bills[:6]:
-                period = b.get('billingPeriodEnd', b.get('billDate', '?'))
-                kwh = b.get('consumptionKWh', b.get('consumption', '?'))
-                amount = b.get('amountJOD', b.get('billAmount', '?'))
-                status = b.get('status', '')
+            # Detect anomalies in billing history
+            amounts = []
+            for b in bill_details[:13]:
+                period = b.get('billPeriod', '?')
+                kwh = b.get('ibillingQuantity', b.get('consumptionKWh', '?'))
+                amount = b.get('totalBillAmount', b.get('amountJOD', '?'))
+                status = 'مدفوعة' if b.get('clearingStatus') == 'X' else 'غير مدفوعة'
                 lines.append(f"  {period}: {kwh} kWh — {amount} دينار ({status})")
+                try:
+                    amounts.append((period, float(kwh)))
+                except (ValueError, TypeError):
+                    pass
+
+            # Anomaly detection: flag bills that are 2x the average
+            if len(amounts) >= 3:
+                avg_kwh = sum(a[1] for a in amounts) / len(amounts)
+                anomalies = [(p, k) for p, k in amounts if k > avg_kwh * 1.8]
+                if anomalies:
+                    lines.append("")
+                    lines.append("تنبيه — فواتير مرتفعة بشكل غير عادي:")
+                    for period, kwh in anomalies:
+                        pct = round((kwh / avg_kwh - 1) * 100)
+                        lines.append(
+                            f"  {period}: {kwh:.0f} kWh — أعلى من معدلك بـ {pct}%"
+                        )
+                    lines.append(
+                        "هل تغير شي بهالفترة؟ (ضيوف، أجهزة جديدة، تدفئة كهربائية؟)"
+                    )
 
         # Cautionary note from JEPCO
         caution = sm.get('cautionaryNoteForSmartMeterConsumption', '')
@@ -882,22 +1016,40 @@ class LLMService:
 
             if diff_pct <= 30:
                 lines.append(
-                    f"الفرق: {diff:.0f} kWh فقط — الأرقام متطابقة تقريباً"
+                    f"الفرق: {diff:.0f} kWh فقط — استهلاكك متطابق مع أجهزتك تقريباً. وضعك ممتاز."
                 )
-            else:
-                direction = "زيادة" if actual_kwh > total_expected else "أقل"
+            elif diff_pct <= 50:
+                direction = "أعلى" if actual_kwh > total_expected else "أقل"
                 lines.append(
-                    f"فرق كبير بين المتوقع ({total_expected} kWh) والفعلي ({actual_kwh:.0f} kWh) — "
-                    f"~{diff_pct:.0f}% {direction}."
+                    f"فرق متوسط: استهلاكك الفعلي ({actual_kwh:.0f} kWh) {direction} من المتوقع "
+                    f"({total_expected} kWh) بنسبة {diff_pct:.0f}%."
                 )
                 lines.extend([
-                    "ممكن يكون في:",
-                    "  1. جهاز يشتغل بدون ما تحس (سخان مياه، فلتر مسبح)",
-                    "  2. تسريب كهربائي أو عداد فيه مشكلة",
                     "",
-                    "ننصحك:",
-                    "  اطلب فحص من فني كهرباء معتمد",
-                    "  أو قدّم شكوى لجيبكو عبر 117 أو فروعهم",
+                    "الأسباب المحتملة:",
+                    "  - جهاز نسيت تذكره (سخان ماء، فرن كهربائي، نشافة)",
+                    "  - جهاز قديم يستهلك أكثر من الطبيعي",
+                    "  - إضاءة عادية بدل LED",
+                    "",
+                    "حاول تتذكر إذا في جهاز ثاني ما ذكرته.",
+                ])
+            else:
+                lines.append(
+                    f"تنبيه مهم: فرق كبير جداً ({diff_pct:.0f}%) بين المتوقع "
+                    f"({total_expected} kWh) والفعلي ({actual_kwh:.0f} kWh)!"
+                )
+                lines.extend([
+                    "",
+                    "هذا الفرق غير طبيعي. الأسباب المحتملة:",
+                    "  1. جهاز يشتغل بدون ما تحس (سخان منسي، مضخة ماء)",
+                    "  2. تسريب كهربائي في التمديدات",
+                    "  3. سرقة كهرباء من خطك — شخص موصّل على عدادك",
+                    "  4. مشكلة في العداد نفسه",
+                    "",
+                    "ننصحك بشدة:",
+                    "  - افحص التمديدات مع كهربائي معتمد",
+                    "  - أطفئ كل الأجهزة وراقب العداد — إذا بقي يعد في سرقة",
+                    "  - تواصل مع جيبكو: اتصل 116 (مجاني) أو زر أقرب فرع",
                 ])
 
         # Find top consumers and give specific advice
@@ -1002,9 +1154,58 @@ class LLMService:
         return None
 
     async def _handle_image(self, image_data: bytes) -> dict:
-        """Route image through the bill scanning pipeline."""
+        """
+        Route image through bill scanning → extract file number → fetch all JEPCO data.
+
+        The primary goal is extracting the 13-digit file number (رقم المرجع).
+        Once we have it, we fetch real-time data from JEPCO and return a full
+        personalized analysis — much richer than what's printed on the paper.
+        """
         scan_result = await vision_service.scan_bill(image_data=image_data)
 
+        # Try to extract the file number from the OCR result
+        file_number = None
+        raw_ocr = scan_result.get('raw_ocr', {})
+
+        # Check multiple possible fields where file number might appear
+        for field in ('account_number', 'file_number', 'reference_number', 'subscriber_number'):
+            candidate = raw_ocr.get(field, '') or scan_result.get(field, '')
+            if candidate:
+                # Normalize: remove slashes, spaces, dashes
+                cleaned = re.sub(r'[/\s\-]', '', str(candidate))
+                # Check if it matches JEPCO file number pattern
+                match = re.search(r'(0\d{12})', cleaned)
+                if match:
+                    file_number = match.group(1)
+                    break
+
+        # Also search the full OCR text for any 13-digit number starting with 0
+        if not file_number:
+            all_text = json.dumps(raw_ocr, ensure_ascii=False) if raw_ocr else ''
+            match = FILE_NUMBER_RE.search(all_text)
+            if match:
+                file_number = match.group(1)
+
+        # If we found a file number, fetch ALL live data from JEPCO
+        if file_number:
+            logger.info("Bill photo: extracted file number %s, fetching live data", file_number)
+            jepco_result = await self._analyze_jepco(
+                text=f'حلل فاتورتي رقم {file_number}',
+                file_number=file_number,
+                intent='billing',
+                jepco_data=None,  # Force fresh fetch from API
+            )
+            if jepco_result:
+                # Prepend a note that we extracted the number from the photo
+                jepco_result['response_text'] = (
+                    f"تم التعرف على رقم الملف من صورة الفاتورة: {file_number}\n\n"
+                    + jepco_result['response_text']
+                )
+                jepco_result['metadata']['source'] = 'bill_photo_scan'
+                jepco_result['metadata']['scan_result'] = scan_result
+                return jepco_result
+
+        # Fallback: return basic OCR scan result if no file number or API failed
         summary_parts = []
         if scan_result.get('subscriber_number'):
             summary_parts.append(f"رقم الاشتراك: {scan_result['subscriber_number']}")
@@ -1014,12 +1215,22 @@ class LLMService:
             jod = scan_result['total_amount_fils'] / 1000
             summary_parts.append(f"المبلغ: {jod:.3f} دينار")
 
-        response_text = "تم تحليل الفاتورة بنجاح.\n" + "\n".join(summary_parts)
+        response_text = "تم تحليل الفاتورة.\n" + "\n".join(summary_parts)
+        if not file_number:
+            response_text += (
+                "\n\nلم أتمكن من قراءة رقم المرجع من الصورة.\n"
+                "حاول تصوير الفاتورة بوضوح أكثر، أو اكتب رقم المرجع يدوياً "
+                "(13 رقم يبدأ بـ 015 — موجود في وسط الفاتورة بجانب كلمة 'رقم المرجع')."
+            )
 
         return {
             'response_text': response_text,
             'response_type': 'bill_scan',
-            'metadata': {'scan_result': scan_result},
+            'metadata': {
+                'scan_result': scan_result,
+                'file_number': file_number,
+                'awaiting': 'file_number' if not file_number else None,
+            },
         }
 
     async def _handle_audio(self, audio_data: bytes) -> dict:

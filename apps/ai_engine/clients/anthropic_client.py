@@ -64,6 +64,7 @@ class AnthropicClient:
                 cost_usd=self._estimate_cost(
                     response.usage.input_tokens,
                     response.usage.output_tokens,
+                    model=model_name,
                 ),
                 latency_ms=latency,
                 task_type=AILog.TaskType.CHAT,
@@ -118,7 +119,16 @@ class AnthropicClient:
             max_tokens=self.config['MAX_TOKENS'],
         )
 
-    @staticmethod
-    def _estimate_cost(input_tokens: int, output_tokens: int) -> float:
-        """Rough cost estimation for Claude Sonnet."""
-        return (input_tokens / 1000 * 0.003) + (output_tokens / 1000 * 0.015)
+    # Cost per 1M tokens (USD) — update when switching models
+    _MODEL_PRICING = {
+        'claude-sonnet-4-6': (3.0, 15.0),
+        'claude-sonnet-4-20250514': (3.0, 15.0),
+        'claude-haiku-4-5-20251001': (0.80, 4.0),
+        'claude-opus-4-6': (15.0, 75.0),
+    }
+
+    def _estimate_cost(self, input_tokens: int, output_tokens: int, model: str | None = None) -> float:
+        """Cost estimation with per-model pricing."""
+        model = model or self.config['CLAUDE_MODEL']
+        inp, out = self._MODEL_PRICING.get(model, (3.0, 15.0))
+        return (input_tokens * inp / 1_000_000) + (output_tokens * out / 1_000_000)

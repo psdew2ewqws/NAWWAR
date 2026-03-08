@@ -505,32 +505,59 @@ async def api_chat_voice(request):
 # ─── JEPCO API Endpoints ──────────────────────────────────────────────────────
 
 async def api_jepco_customer(request):
-    """Get JEPCO customer info — requires authenticated endpoint (not available)."""
-    return JsonResponse({'error': 'Endpoint requires JEPCO authentication'}, status=501)
+    """Get JEPCO SAP subscriber info for a file number."""
+    from apps.consumer.clients.jepco_client import fetch_sap_info
+    file_number = request.GET.get('file_number', '')
+    if not file_number:
+        return JsonResponse({'error': 'file_number required'}, status=400)
+    data = await fetch_sap_info(file_number)
+    if data:
+        return JsonResponse({'statusCode': 'Success', 'body': data})
+    return JsonResponse({'error': 'Customer not found'}, status=404)
 
 
 async def api_jepco_bills(request, file_number):
-    """Get bills — requires authenticated endpoint (not available)."""
-    return JsonResponse({'error': 'Endpoint requires JEPCO authentication'}, status=501)
+    """Get full billing history for a file number."""
+    from apps.consumer.clients.jepco_client import fetch_bills
+    data = await fetch_bills(file_number)
+    if data:
+        return JsonResponse({'statusCode': 'Success', 'body': data})
+    return JsonResponse({'error': 'Bills not available'}, status=404)
 
 
 async def api_jepco_complaints(request):
-    """Get complaints — requires authenticated endpoint (not available)."""
-    return JsonResponse({'error': 'Endpoint requires JEPCO authentication'}, status=501)
+    """Get complaints — requires mobile number linkage."""
+    return JsonResponse({'error': 'Endpoint requires linked mobile number'}, status=501)
 
 
 async def api_jepco_provinces(request):
-    """Get JEPCO coverage provinces — requires authenticated endpoint (not available)."""
-    return JsonResponse({'error': 'Endpoint requires JEPCO authentication'}, status=501)
+    """Get JEPCO coverage provinces."""
+    from apps.consumer.clients.jepco_client import _client, _authed_post, _get_token
+    async with _client() as client:
+        await _get_token(client)
+        data = await _authed_post(client, 'Complaints/GetCallCenterProviance', {})
+    if data:
+        return JsonResponse({'statusCode': 'Success', 'body': data})
+    return JsonResponse({'error': 'Provinces not available'}, status=404)
 
 
 async def api_jepco_verify_meter(request, meter_number):
-    """Validate meter — requires authenticated endpoint (not available)."""
-    return JsonResponse({'error': 'Endpoint requires JEPCO authentication'}, status=501)
+    """Validate a meter number against JEPCO SAP."""
+    from apps.consumer.clients.jepco_client import _client, _authed_post, _get_token
+    async with _client() as client:
+        await _get_token(client)
+        data = await _authed_post(
+            client,
+            'CustomerInformationDetails/CheckMeterNumberinSAP',
+            {'MeterNumber': meter_number, 'LanguageId': 'AR', 'MobileNumber': ''},
+        )
+    if data:
+        return JsonResponse({'statusCode': 'Success', 'body': data})
+    return JsonResponse({'error': 'Meter not found in SAP'}, status=404)
 
 
 async def api_jepco_smart_meter(request, file_number):
-    """Get real-time smart meter dashboard data from JEPCO (no auth needed)."""
+    """Get real-time smart meter dashboard data from JEPCO (JWT auto-auth)."""
     from apps.consumer.clients.jepco_client import fetch_smart_meter
     data = await fetch_smart_meter(file_number)
     if data:
@@ -572,15 +599,12 @@ async def api_jepco_analyze(request, file_number):
 
 async def api_jepco_account_summary(request):
     """
-    Combined account summary — smart meter + SAP subscriber info.
+    Combined account summary — all JEPCO data via JWT auto-auth.
 
-    The frontend now calls JEPCO directly from the user's browser (bypasses
-    server-side geo-blocking). This endpoint is kept as a fallback for
-    environments where JEPCO is reachable from the server.
+    Fetches smart meter, SAP info, bills, consumption comparison,
+    and subsidy simulation in parallel.
     """
-    import asyncio
-    from django.conf import settings
-    from apps.consumer.clients.jepco_client import fetch_smart_meter
+    from apps.consumer.clients.jepco_client import fetch_all_data
 
     file_number = request.GET.get('file_number', '')
     if not file_number:
@@ -588,17 +612,17 @@ async def api_jepco_account_summary(request):
         file_number = config.get('DEFAULT_FILE_NUMBER', '')
 
     if not file_number:
-        return JsonResponse({
-            'error': 'No file number provided',
-            'smartMeter': None,
-            'subscriber': None,
-        })
+        return JsonResponse({'error': 'No file number provided'}, status=400)
 
-    # Fetch smart meter data (no auth needed)
-    smart_data = await fetch_smart_meter(file_number)
+    data = await fetch_all_data(file_number)
 
     return JsonResponse({
-        'smartMeter': smart_data if smart_data else None,
-        'subscriber': None,
         'fileNumber': file_number,
+        'smartMeter': data.get('smart_meter'),
+        'subscriber': data.get('sap_info'),
+        'bills': data.get('bills'),
+        'accountStatement': data.get('account_statement'),
+        'consumptionComparison': data.get('consumption_comparison'),
+        'subsidySimulation': data.get('subsidy_simulation'),
+        'billHeader': data.get('bill_header'),
     })

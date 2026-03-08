@@ -141,7 +141,7 @@ ANTHROPIC_API_KEY = config('ANTHROPIC_API_KEY', default='')
 AI_CONFIG = {
     'VISION_MODEL': 'gpt-4o',
     'WHISPER_MODEL': 'whisper-1',
-    'CLAUDE_MODEL': 'claude-sonnet-4-20250514',
+    'CLAUDE_MODEL': 'claude-sonnet-4-6',
     'EMBEDDING_MODEL': 'text-embedding-3-small',
     'MAX_TOKENS': 4096,
     'TEMPERATURE': 0.3,
