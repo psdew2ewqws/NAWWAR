@@ -53,18 +53,41 @@ class VoiceService:
         """
         Synthesize Arabic text to speech audio.
 
-        Tries edge-tts first (free), falls back to OpenAI TTS.
+        Uses OpenAI TTS (natural-sounding), falls back to edge-tts (free).
 
         Returns:
             Audio bytes in MP3 format.
         """
-        if not voice:
-            voice = self.tts_config['DEFAULT_VOICE']
-
-        logger.info("VoiceService.synthesize: %d chars, voice=%s", len(text), voice)
+        logger.info("VoiceService.synthesize: %d chars", len(text))
         start = time.monotonic()
 
-        # Try edge-tts first (free)
+        # Primary: OpenAI TTS (natural voice quality)
+        try:
+            response = await self.openai.client.audio.speech.create(
+                model='tts-1-hd',
+                voice='nova',
+                input=text[:4096],
+                response_format='mp3',
+            )
+            audio_data = response.content
+
+            latency = int((time.monotonic() - start) * 1000)
+            await AILog.objects.acreate(
+                model_name='tts-1-hd:nova',
+                provider=AILog.Provider.OPENAI,
+                latency_ms=latency,
+                task_type=AILog.TaskType.TTS,
+                success=True,
+            )
+            logger.info("VoiceService.synthesize (openai-hd): %d bytes, %dms", len(audio_data), latency)
+            return audio_data
+
+        except Exception as e:
+            logger.warning("OpenAI TTS failed, falling back to edge-tts: %s", e)
+
+        # Fallback: edge-tts (free)
+        if not voice:
+            voice = self.tts_config['DEFAULT_VOICE']
         try:
             communicate = edge_tts.Communicate(text, voice)
             audio_data = b""
@@ -84,35 +107,11 @@ class VoiceService:
                 logger.info("VoiceService.synthesize (edge-tts): %d bytes, %dms", len(audio_data), latency)
                 return audio_data
         except Exception as e:
-            logger.warning("edge-tts failed, falling back to OpenAI TTS: %s", e)
-
-        # Fallback: OpenAI TTS
-        try:
-            response = await self.openai.client.audio.speech.create(
-                model='tts-1',
-                voice='nova',
-                input=text[:4096],
-                response_format='mp3',
-            )
-            audio_data = response.content
-
-            latency = int((time.monotonic() - start) * 1000)
-            await AILog.objects.acreate(
-                model_name='tts-1:nova',
-                provider=AILog.Provider.OPENAI,
-                latency_ms=latency,
-                task_type=AILog.TaskType.TTS,
-                success=True,
-            )
-            logger.info("VoiceService.synthesize (openai): %d bytes, %dms", len(audio_data), latency)
-            return audio_data
-
-        except Exception as e:
             latency = int((time.monotonic() - start) * 1000)
             logger.error("VoiceService.synthesize failed (both providers): %s", e)
             await AILog.objects.acreate(
-                model_name='tts-1:nova',
-                provider=AILog.Provider.OPENAI,
+                model_name=f'edge-tts:{voice}',
+                provider=AILog.Provider.LOCAL,
                 latency_ms=latency,
                 task_type=AILog.TaskType.TTS,
                 success=False,
