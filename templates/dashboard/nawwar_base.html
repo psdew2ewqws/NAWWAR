@@ -126,24 +126,15 @@
         .topbar-nexara {
             display: flex;
             align-items: center;
-            gap: 4px;
             text-decoration: none;
-            opacity: 0.5;
+            opacity: 0.6;
             transition: opacity 0.2s;
             flex-shrink: 0;
         }
         .topbar-nexara:hover { opacity: 1; }
-        .topbar-nexara-logo {
-            height: 18px; width: 18px;
-            border-radius: 3px;
-            object-fit: cover;
-        }
-        .topbar-nexara-text {
-            font-family: var(--mono);
-            font-size: 0.6875rem;
-            font-weight: 700;
-            color: var(--text-secondary);
-            letter-spacing: 0.5px;
+        .topbar-nexara-n {
+            height: 22px;
+            object-fit: contain;
         }
 
         .brand-separator {
@@ -1005,7 +996,7 @@
             <span style="font-weight: 400; font-size: 0.75rem; color: var(--text-muted); font-family: var(--mono);">NAWWAR</span>
         </a>
         <a href="https://Nexaratech.io" target="_blank" rel="noopener" class="topbar-nexara" title="Powered by Nexara">
-            <img src="{% static 'images/nexara-logo.jpeg' %}" alt="N" class="topbar-nexara-logo"><span class="topbar-nexara-text">N</span>
+            <img src="{% static 'images/nexara-n.jpeg' %}" alt="N" class="topbar-nexara-n">
         </a>
 
         <nav class="topbar-nav">
