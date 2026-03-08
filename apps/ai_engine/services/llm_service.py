@@ -290,6 +290,32 @@ class LLMService:
         # Trigger if: billing/savings/general intent OR the message is just the number
         is_bare_number = file_match and text_normalized.strip() == file_match.group(1)
 
+        # Detect partial digit sequences (user tried to say a file number but incomplete)
+        # e.g. voice: "ثلاثة سبعة ثلاثة ثمانية أربعة سبعة واحد" → "3738471" (only 7 digits)
+        partial_digits_match = re.search(r'(\d{4,12})', text_normalized) if not file_match else None
+        if partial_digits_match and not file_match:
+            partial = partial_digits_match.group(1)
+            # Check if most of the normalized text is just this number
+            stripped = re.sub(r'[^\d\w]', '', text_normalized.replace(partial, '')).strip()
+            # If the remaining text is short (a few stray words from STT), user was saying a number
+            remaining_words = [w for w in text_normalized.replace(partial, '').split() if len(w) > 1]
+            if len(remaining_words) <= 3:
+                logger.info("Partial file number detected: %s (%d digits)", partial, len(partial))
+                return {
+                    'response_text': (
+                        f"التقطت الرقم {partial} لكنه غير مكتمل. "
+                        "رقم الملف لازم يكون 13 خانة ويبدأ بـ 015.\n\n"
+                        "ممكن تكتب رقم الملف بالأرقام هيك مثلاً: 0150706667387\n"
+                        "أو صوّر الفاتورة وأنا بقرأ الرقم منها مباشرة."
+                    ),
+                    'response_type': 'text',
+                    'metadata': {
+                        'intent': 'billing',
+                        'awaiting': 'file_number',
+                        'partial_number': partial,
+                    },
+                }
+
         # Use file number from message, or fall back to one from previous turn
         detected_file = file_match.group(1) if file_match else None
         effective_file = detected_file or file_number

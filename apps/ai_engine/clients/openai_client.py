@@ -175,6 +175,10 @@ class OpenAIClient:
             kwargs = {
                 'model': model,
                 'file': audio_file,
+                'prompt': (
+                    'رقم الاشتراك: صفر واحد خمسة صفر سبعة صفر ستة ستة ستة سبعة ثلاثة ثمانية سبعة. '
+                    'استهلاك الكهرباء، فاتورة، كيلوواط، دينار، جيبكو، عداد ذكي.'
+                ),
             }
             # Only whisper-1 supports the language hint; gpt-4o-transcribe auto-detects
             if model.startswith('whisper'):

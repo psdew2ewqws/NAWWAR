@@ -98,6 +98,12 @@ text-shadow:0 0 30px rgba(0,255,65,.5),0 0 80px rgba(0,255,65,.15),0 0 2px rgba(
 .m1-power{font-size:1rem;color:#00ff41;margin-top:.8rem;
 letter-spacing:.25em;text-transform:uppercase;opacity:0;
 text-shadow:0 0 15px rgba(0,255,65,.3),0 0 40px rgba(0,255,65,.1)}
+.m1-nexara{margin-top:1.2rem;opacity:0;transition:opacity 1s}
+.m1-nexara a{color:#0a5a0a;text-decoration:none;font-size:.55rem;letter-spacing:.15em;
+display:inline-flex;align-items:center;gap:6px;transition:color .3s}
+.m1-nexara a:hover{color:#00ff41;text-shadow:0 0 8px rgba(0,255,65,.3)}
+.m1-nexara-logo{height:18px;width:18px;border-radius:3px;object-fit:cover;filter:brightness(.7);transition:filter .3s}
+.m1-nexara a:hover .m1-nexara-logo{filter:brightness(1)}
 
 /* ── M6: TERMINAL (full width) ── */
 .mon.m6{grid-column:1/-1}
@@ -170,6 +176,7 @@ animation:pulse-rec 1s steps(1) infinite}
     <div class="m1-greek2">οὔτε λέγει οὔτε κρύπτει ἀλλὰ σημαίνει</div>
     <div class="m1-attr">— ΗΡΑΚΛΕΙΤΟΣ</div>
     <div class="m1-power">Power ?</div>
+    <div class="m1-nexara"><a href="https://Nexaratech.io" target="_blank" rel="noopener"><img src="{% static 'images/nexara-logo.jpeg' %}" alt="Nexara" class="m1-nexara-logo">Powered by NEXARA</a></div>
   </div>
 
   <!-- ═══ M2: RECON SCAN ═══ -->
@@ -553,6 +560,7 @@ function playStory(){
   /* ── ACT 4: M1 — نوّر ── */
   powerOn('#m1',tl,3.2,function(){
     gsap.to('.m1-power',{opacity:1,duration:0.4,delay:0.2,ease:'power1.out'});
+    gsap.to('.m1-nexara',{opacity:1,duration:0.6,delay:0.8,ease:'power1.out'});
   });
 
   /* ── ACT 5: M2 — recon ── */
@@ -603,6 +611,7 @@ document.addEventListener('click',function(e){
     document.getElementById('room').style.opacity='1';
     /* fire everything that relies on callbacks */
     gsap.set('.m1-power',{opacity:1});
+    gsap.set('.m1-nexara',{opacity:1});
     gsap.set('#ftr',{opacity:1});
     if(!termStarted)initTerm();
     /* type remaining monitors instantly */
